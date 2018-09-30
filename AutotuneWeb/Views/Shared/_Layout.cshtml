@@ -6,7 +6,7 @@
     <title>@ViewBag.Title - Autotune</title>
     @Styles.Render("~/Content/css")
     @Scripts.Render("~/bundles/modernizr")
-
+    <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
 </head>
 <body>
     <div class="navbar navbar-inverse navbar-fixed-top">
@@ -21,8 +21,9 @@
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
-                    <li>@Html.ActionLink("Home", "Index", "Home")</li>
-                    <li>@Html.ActionLink("About", "About", "Home")</li>
+                    <li><a href="@Url.Action("Index", "Home")"><i class="fa fa-home"></i> Home</a></li>
+                    <li><a href="@Url.Action("About", "Home")"><i class="fa fa-question"></i> About</a></li>
+                    <li><a href="https://github.com/MarkMpn/AutotuneWeb"><i class="fa fa-github"></i> GitHub</a></li>
                 </ul>
             </div>
         </div>
