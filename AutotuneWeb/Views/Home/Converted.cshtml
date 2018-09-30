@@ -1,0 +1,151 @@
+﻿@model AutotuneWeb.Models.OapsProfile
+@{
+    ViewBag.Title = "Converted Profile";
+
+    var profileJson = Newtonsoft.Json.JsonConvert.SerializeObject(Model, Newtonsoft.Json.Formatting.Indented);
+}
+
+<h1>Converted Profile</h1>
+
+<p>
+    Thank you, your Nightscout profile <strong>@ViewBag.ProfileName</strong> has been converted ready to use for Autotune.
+    Copy &amp; paste your converted profile below into <code>profile.json</code>,
+    <code>pumpprofile.json</code> and <code>autotune.json</code> and run Autotune with
+    <code>oref0-autotune --dir=~/myopenaps --ns-host=@ViewBag.NSUrl --start-date=YYYY-MM-DD</code>
+</p>
+
+@{ 
+    var warnings = (List<string>)ViewBag.Warnings;
+}
+@if (warnings != null && warnings.Count > 0)
+{
+    <div class="alert alert-warning">
+        @foreach (var warning in warnings)
+        {
+            if (warning.Contains("\"rate\""))
+            {
+                <p>@Html.ActionLink(warning, "MissingRate")</p>
+            }
+            else
+            {
+                <p>@warning</p>
+            }
+        }
+    </div>
+}
+
+
+<div class="timeline">
+    @{
+        var minutesInDay = 24 * 60;
+        var maxValue = Model.BasalProfile.Max(b => b.Rate);
+    }
+    @for (var i = 0; i < Model.BasalProfile.Length; i++)
+    {
+        var basal = Model.BasalProfile[i];
+        var endTime = i < Model.BasalProfile.Length - 1 ? Model.BasalProfile[i + 1].Minutes : minutesInDay;
+        var duration = endTime - basal.Minutes;
+
+        <div class="timeline-block" style="width: @(duration * 100f / minutesInDay)%; height: @(basal.Rate * 100 / maxValue)px; margin-top: @(100 - (basal.Rate * 100 / maxValue))px">
+        </div>
+    }
+</div>
+
+<pre>
+@profileJson
+</pre>
+
+@using (Html.BeginForm("RunJob", "Home"))
+{
+    @Html.Hidden("nsUrl", (Uri)ViewBag.NSUrl)
+    @Html.Hidden("oapsProfile", profileJson)
+    @Html.Hidden("units", (string)ViewBag.Units)
+    <p>
+        Ready to run Autotune now? Enter a few more details, then click Run Now to have us run Autotune for you.
+    </p>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="min5MinCarbImpact">Min. 5 Minutes Carb Impact</label>
+                <div class="input-group">
+                    <input type="number" step="0.1" min="1" max="20" name="min5MCarbImpact" value="@Model.Min5mCarbImpact" class="form-control" required />
+                    <span class="input-group-addon">mg/dL/5m</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="alert alert-info">
+                The minimum amount of the expected carb impact that should be assumed when no carb absorption is identified from the CGM data,
+                forcing the remaining carbs on board to decay.
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="pumpBasalIncrement">Pump Basal Increment</label>
+                <div class="input-group">
+                    <input type="number" step="0.005" min="0.005" max="1" name="pumpBasalIncrement" value="0.01" class="form-control" required />
+                    <span class="input-group-addon">U/h</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="alert alert-info">
+                Autotune will likely recommend basals in fractions of a unit that you can't program into your pump, so enter here what
+                increments your pump can handle (0.1, 0.5 etc.) to get your results rounded for you.
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" name="uamAsBasal" value="true" />
+                    Categorize UAM as basal
+                </label>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="alert alert-info">
+                If Autotune sees some sudden rises in your CGM data, it may conclude that there were carbs eaten but not entered into Nightscout.
+                If you have reliably entered all carbs eaten, tick this box and those rises will be used to recommend changes to the basal rate.
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <label for="curve">Insulin Type</label>
+            <select name="curve" class="form-control">
+                <option value="rapid-acting">Rapid Acting (Humalog/Novolog/Novorapid)</option>
+                <option value="ultra-rapid">Ultra Rapid (Fiasp)</option>
+            </select>
+        </div>
+        <div class="col-md-8">
+            <div class="alert alert-info">
+                Select the type of insulin you use so that Autotune can tell how quickly it acts and decays.
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="emailResultsTo">Email Results To</label>
+                <div class="input-group">
+                    <span class="input-group-addon">@@</span>
+                    <input type="email" name="emailResultsTo" class="form-control" required />
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="alert alert-info">
+                Autotune takes a few minutes to run, so we'll email the results to you when they're ready. You should get them in 10 - 20 minutes,
+                check your spam folder if you don't get it.
+            </div>
+        </div>
+    </div>
+    <p>
+        <input type="submit" class="btn btn-success" value="Run Now" />
+    </p>
+}

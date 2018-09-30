@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2026
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutotuneWeb", "AutotuneWeb\AutotuneWeb.csproj", "{E3E06F28-26CD-46CA-B1C0-E5FA6B16AD57}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutotuneRunner", "AutotuneRunner\AutotuneRunner.csproj", "{A77E6122-9EC0-4A69-9384-E70615C90883}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E3E06F28-26CD-46CA-B1C0-E5FA6B16AD57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3E06F28-26CD-46CA-B1C0-E5FA6B16AD57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3E06F28-26CD-46CA-B1C0-E5FA6B16AD57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3E06F28-26CD-46CA-B1C0-E5FA6B16AD57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A77E6122-9EC0-4A69-9384-E70615C90883}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A77E6122-9EC0-4A69-9384-E70615C90883}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A77E6122-9EC0-4A69-9384-E70615C90883}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A77E6122-9EC0-4A69-9384-E70615C90883}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B04268C7-1C89-44B1-A3A8-487CBD719E60}
+	EndGlobalSection
+EndGlobal

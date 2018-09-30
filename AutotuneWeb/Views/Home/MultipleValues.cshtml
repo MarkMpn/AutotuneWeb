@@ -1,0 +1,116 @@
+﻿@model AutotuneWeb.Models.NSProfileDetails
+
+@{
+    ViewBag.Title = "Multiple Profile Values";
+    var secondsInDay = 60 * 60 * 24;
+}
+
+<h1>Multiple Values in Profile</h1>
+
+@if (Model.CarbRatio.Length > 1 && Model.Sensitivity.Length > 1)
+{
+    <p>
+        You have different carb ratios and insulin sensitivity factors in your profile
+        for different times of day, but autotune only supports one of each.
+    </p>
+}
+else if (Model.CarbRatio.Length > 1)
+{
+    <p>
+        You have different carb ratios in your profile for different times of day, but
+        autotune only supports one.
+    </p>
+}
+else
+{
+    <p>
+        You have different insulin sensitivity factors in your profile for different times
+        of day, but autotune only supports one.
+    </p>
+}
+
+<p>
+    Use the options below to select the value you want autotune to use. You can choose
+    one of the values from your profile, or you can choose a different value.
+</p>
+
+@using (Html.BeginForm())
+{
+    @Html.Hidden("NSUrl", (Uri)ViewBag.NSUrl)
+
+    if (Model.CarbRatio.Length > 1)
+    {
+        var maxValue = Model.CarbRatio.Max(cr => cr.Value);
+        var averageValue = Math.Round(Model.CarbRatio.Average(cr => cr.Value), 1);
+
+        <h2>Carb Ratio (g/U)</h2>
+        <p>
+            Select a value to use from one of the time blocks taken from your profile below, or use your average value across the day.
+        </p>
+        <p>
+            <label>
+                <input type="radio" name="cr" value="@averageValue" checked />
+                Average (@averageValue.ToString("0.0") - dashed line in chart below)
+            </label>
+        </p>
+        <div class="timeline">
+            <div class="avgline" style="margin-top: @(100 - (averageValue * 100 / maxValue))px">
+            </div>
+            @for (var i = 0; i < Model.CarbRatio.Length; i++)
+            {
+                var cr = Model.CarbRatio[i];
+                var endTime = i < Model.CarbRatio.Length - 1 ? Model.CarbRatio[i + 1].TimeAsSeconds : secondsInDay;
+                var duration = endTime - cr.TimeAsSeconds;
+
+                <div class="timeline-block" style="width: @(duration * 100f / secondsInDay)%; height: @(cr.Value * 100 / maxValue)px; margin-top: @(100 - (cr.Value * 100 / maxValue))px">
+                    <p>
+                        <label>
+                            <input type="radio" name="cr" value="@cr.Value" /><br />
+                            @cr.Value.ToString("0.0")
+                        </label>
+                    </p>
+                </div>
+            }
+        </div>
+    }
+
+    if (Model.Sensitivity.Length > 1)
+    {
+        var maxValue = Model.Sensitivity.Max(sens => sens.Value);
+        var averageValue = Math.Round(Model.Sensitivity.Average(sens => sens.Value), 1);
+
+        <h2>Insulin Sensitivity Factor (@(Model.Units == "mmol" ? "mmol/L" : "mg/dL")/U)</h2>
+        <p>
+            Select a value to use from one of the time blocks taken from your profile below, or use your average value across the day.
+        </p>
+        <p>
+            <label>
+                <input type="radio" name="sens" value="@averageValue" checked />
+                Average (@(averageValue.ToString("0.0")) - dashed line in chart below)
+            </label>
+        </p>
+        <div class="timeline">
+            <div class="avgline" style="margin-top: @(100 - (averageValue * 100 / maxValue))px">
+            </div>
+            @for (var i = 0; i < Model.Sensitivity.Length; i++)
+            {
+                var sens = Model.Sensitivity[i];
+                var endTime = i < Model.Sensitivity.Length - 1 ? Model.Sensitivity[i + 1].TimeAsSeconds : secondsInDay;
+                var duration = endTime - sens.TimeAsSeconds;
+
+                <div class="timeline-block" style="width: @(duration * 100f / secondsInDay)%; height: @(sens.Value * 100 / maxValue)px; margin-top: @(100 - (sens.Value * 100 / maxValue))px">
+                    <p>
+                        <label>
+                            <input type="radio" name="sens" value="@sens.Value" /><br />
+                            @(sens.Value.ToString("0.0"))
+                        </label>
+                    </p>
+                </div>
+            }
+        </div>
+    }
+
+    <p>
+        <input type="submit" class="btn btn-primary" value="Autotune" />
+    </p>
+}

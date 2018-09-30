@@ -1,0 +1,46 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="jumbotron">
+    <h1>Autotune</h1>
+    <p class="lead">Enter your Nightscout site URL to get started.</p>
+    @using (Html.BeginForm("Autotune", "Home"))
+    {
+        <div class="form-group">
+            <div class="input-group input-group-lg">
+                <input type="url" class="form-control" id="NSUrl" name="NSUrl" placeholder="https://mynightscout.azurewebsites.net/" style="max-width: 100%" />
+                <span class="input-group-btn">
+                    <button class="btn btn-primary">Start &raquo;</button>
+                </span>
+            </div>
+        </div>
+
+        @Html.ValidationMessage("NSUrl")
+    }
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <h2>About Autotune</h2>
+        <p>
+            Autotune is a system that recommends changes to your basal rate, insulin:carb ratio and insulin sensitivity factor based on the data
+            recorded in Nightscout.
+        </p>
+        <p><a class="btn btn-default" href="https://openaps.readthedocs.io/en/latest/docs/Customize-Iterate/autotune.html">Learn more &raquo;</a></p>
+    </div>
+    <div class="col-md-4">
+        <h2>About AutotuneWeb</h2>
+        <p>
+            AutotuneWeb aims to make the process of running Autotune easier by generating an Autotune-compatible profile automatically based on
+            your Nightscout profile, and even run Autotune for you in the cloud and email you the results.
+        </p>
+        <p><a class="btn btn-default" href="@Url.Action("About")">Learn more &raquo;</a></p>
+    </div>
+    <div class="col-md-4">
+        <h2>Support</h2>
+        <p>
+            For help with Autotune generally or AutotuneWeb in particular, reach out in the regular Facebook groups or Gitter channels
+        </p>
+    </div>
+</div>

@@ -1,0 +1,55 @@
+﻿body {
+    padding-top: 50px;
+    padding-bottom: 20px;
+}
+
+/* Set padding to keep content from hitting the edges */
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Override the default bootstrap behavior where horizontal description lists 
+   will truncate terms that are too long to fit in the left column 
+*/
+.dl-horizontal dt {
+    white-space: normal;
+}
+
+.timeline{
+    width: 100%;
+    height: 100px;
+    vertical-align: bottom;
+    position: relative;
+}
+
+.avgline{
+    position: absolute;
+    z-index: -1;
+    width: 100%;
+    border-bottom: 1px dashed #09f;
+}
+
+.timeline-block{
+    display: inline-block;
+    padding: 0;
+    margin: 0;
+    float: left;
+    text-align: center;
+    color: #09f;
+    text-overflow: ellipsis;
+    background-color: rgba(0, 153, 255, 0.1);
+    border-top: solid 1px #09f;
+}
+
+    .timeline-block p {
+        margin: 5px;
+        width: 100%;
+        height: 100%;
+    }
+
+        .timeline-block p label {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
