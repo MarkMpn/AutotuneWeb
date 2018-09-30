@@ -16,12 +16,20 @@ namespace AutotuneWeb.Controllers
     {
         public ActionResult Index()
         {
-            return View();
+            var url = Request.Cookies["nsUrl"]?.Value;
+            return View((object)url);
         }
 
         [HttpPost]
         public ActionResult Autotune(Uri nsUrl, decimal? cr, decimal? sens)
         {
+            if (nsUrl == null)
+            {
+                ModelState.AddModelError(nameof(nsUrl), "Nightscout URL is required");
+                return View("Index");
+            }
+
+            Response.Cookies.Add(new HttpCookie("nsUrl", nsUrl.ToString()));
             ViewBag.NSUrl = nsUrl;
             NSProfileDetails nsProfile;
 

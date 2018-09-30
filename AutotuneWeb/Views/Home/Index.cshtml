@@ -1,4 +1,6 @@
-﻿@{
+﻿@model string
+
+@{
     ViewBag.Title = "Home Page";
 }
 
@@ -9,7 +11,10 @@
     {
         <div class="form-group">
             <div class="input-group input-group-lg">
-                <input type="url" class="form-control" id="NSUrl" name="NSUrl" placeholder="https://mynightscout.azurewebsites.net/" style="max-width: 100%" />
+                <span class="input-group-addon">
+                    <i class="fa fa-globe"></i>
+                </span>
+                <input type="url" class="form-control" id="NSUrl" name="NSUrl" placeholder="https://mynightscout.azurewebsites.net/" style="max-width: 100%" value="@Model" />
                 <span class="input-group-btn">
                     <button class="btn btn-primary">Start &raquo;</button>
                 </span>
