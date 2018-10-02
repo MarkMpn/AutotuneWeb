@@ -54,7 +54,7 @@ namespace AutotuneWeb.Models
                 var json = reader.ReadToEnd();
                 var profileSwitches = JsonConvert.DeserializeObject<NSProfileSwitch[]>(json);
 
-                if (profileSwitches.Length == 1)
+                if (profileSwitches.Length == 1 && !String.IsNullOrEmpty(profileSwitches[0].ProfileJson))
                 {
                     var profile = JsonConvert.DeserializeObject<NSProfileDetails>(profileSwitches[0].ProfileJson);
                     profile.Name = profileSwitches[0].Name;
