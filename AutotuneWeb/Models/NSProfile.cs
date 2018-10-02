@@ -31,9 +31,6 @@ namespace AutotuneWeb.Models
 
         public NSValueWithTime[] CarbRatio { get; set; }
 
-        [JsonProperty(PropertyName = "carbs_hr")]
-        public decimal CarbsPerHour { get; set; }
-
         [JsonProperty(PropertyName = "sens")]
         public NSValueWithTime[] Sensitivity { get; set; }
 
@@ -83,7 +80,7 @@ namespace AutotuneWeb.Models
         {
             var oaps = new OapsProfile
             {
-                Min5mCarbImpact = 8,//Math.Round((this.CarbsPerHour / 60 * 5) / this.CarbRatio[0].Value * ToMgDl(this.Sensitivity[0].Value), 1),
+                Min5mCarbImpact = 8,
                 Dia = this.Dia,
                 BasalProfile = this.Basal.Select(b => new OapsBasalProfile
                 {
@@ -113,14 +110,6 @@ namespace AutotuneWeb.Models
                 return value * 18;
 
             return value;
-        }
-
-        public string FormatUnits(decimal value)
-        {
-            if (Units == "mmol")
-                return $"{value / 18:0.0} mmol/L";
-
-            return $"{value:0.0} mg/dL";
         }
     }
 
