@@ -82,21 +82,28 @@ namespace AutotuneWeb.Models
             {
                 Min5mCarbImpact = 8,
                 Dia = this.Dia,
-                BasalProfile = this.Basal.Select(b => new OapsBasalProfile
-                {
-                    Minutes = b.TimeAsSeconds / 60,
-                    Rate = b.Value
-                }).ToArray(),
+                BasalProfile = this.Basal
+                    .GroupBy(b => b.TimeAsSeconds) // Nightscout often ends up having multiple entries for the same
+                    .Select(g => g.Last())         // time, dedupe and take the last entry for each time
+                    .OrderBy(b => b.TimeAsSeconds)
+                    .Select(b => new OapsBasalProfile
+                    {
+                        Minutes = b.TimeAsSeconds / 60,
+                        Rate = b.Value
+                    })
+                    .ToArray(),
                 IsfProfile = new OapsIsfProfile
                 {
-                    Sensitivities = this.Sensitivity.Select((s, i) => new OapsSensitivity
-                    {
-                        Index = i,
-                        Sensitivity = ToMgDl(s.Value),
-                        Offset = s.TimeAsSeconds / 60,
-                        X = i, // TODO: not sure what X is for
-                        EndOffset = i == this.Sensitivity.Length - 1 ? 1440 : (this.Sensitivity[i-1].TimeAsSeconds / 60)
-                    }).ToArray()
+                    Sensitivities = this.Sensitivity
+                        .Select((s, i) => new OapsSensitivity
+                        {
+                            Index = i,
+                            Sensitivity = ToMgDl(s.Value),
+                            Offset = s.TimeAsSeconds / 60,
+                            X = i, // TODO: not sure what X is for
+                            EndOffset = i == this.Sensitivity.Length - 1 ? 1440 : (this.Sensitivity[i-1].TimeAsSeconds / 60)
+                        })
+                        .ToArray()
                 },
                 CarbRatio = this.CarbRatio[0].Value
             };
