@@ -21,7 +21,7 @@ namespace AutotuneRunner
                 con.Open();
 
                 // Load in the jobs that haven't been run yet
-                cmd.CommandText = "SELECT TOP 1 JobID, NSUrl, Profile, PumpBasalIncrement, EmailResultsTo, Units, CategorizeUAMAsBasal FROM Jobs WHERE ProcessingStarted IS NULL ORDER BY JobID";
+                cmd.CommandText = "SELECT TOP 1 JobID, NSUrl, Profile, PumpBasalIncrement, EmailResultsTo, Units, TimeZone, CategorizeUAMAsBasal FROM Jobs WHERE ProcessingStarted IS NULL ORDER BY JobID";
 
                 var profilesToRun = new List<Job>();
 
@@ -35,7 +35,8 @@ namespace AutotuneRunner
                         var pumpBasalIncrement = reader.GetDecimal(3);
                         var email = reader.GetString(4);
                         var units = reader.GetString(5);
-                        var uamAsBasal = reader.GetBoolean(6);
+                        var timezone = reader.GetString(6);
+                        var uamAsBasal = reader.GetBoolean(7);
 
                         profilesToRun.Add(new Job
                         {
@@ -45,6 +46,7 @@ namespace AutotuneRunner
                             PumpBasalIncrement = pumpBasalIncrement,
                             EmailResultsTo = email,
                             Units = units,
+                            TimeZone = timezone,
                             UAMAsBasal = uamAsBasal
                         });
                     }
@@ -95,7 +97,7 @@ namespace AutotuneRunner
                             "rm -f ./autotune/*.*".Bash();
 
                             // Run Autotune
-                            var cmdLine = $"oref0-autotune --dir={autotunePath} --ns-host={job.NSUrl} --start-date={startDate:yyyy-MM-dd} --end-date={endDate:yyyy-MM-dd} --categorize-uam-as-basal={(job.UAMAsBasal ? "true" : "false")}";
+                            var cmdLine = $"TZ='{job.TimeZone}' && export TZ && oref0-autotune --dir={autotunePath} --ns-host={job.NSUrl} --start-date={startDate:yyyy-MM-dd} --end-date={endDate:yyyy-MM-dd} --categorize-uam-as-basal={(job.UAMAsBasal ? "true" : "false")}";
                             result = cmdLine;
                             cmdLine.Bash();
                         }

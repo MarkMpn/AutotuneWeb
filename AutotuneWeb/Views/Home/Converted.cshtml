@@ -11,7 +11,8 @@
     Thank you, your Nightscout profile <strong>@ViewBag.ProfileName</strong> has been converted ready to use for Autotune.
     Copy &amp; paste your converted profile below into <code>profile.json</code>,
     <code>pumpprofile.json</code> and <code>autotune.json</code> and run Autotune with
-    <code>oref0-autotune --dir=~/myopenaps --ns-host=@ViewBag.NSUrl --start-date=YYYY-MM-DD</code>
+    <code>oref0-autotune --dir=~/myopenaps --ns-host=@ViewBag.NSUrl --start-date=YYYY-MM-DD</code>. Your profile is in the
+    <code>@ViewBag.TimeZone</code> timezone.
 </p>
 
 @{ 
@@ -60,6 +61,7 @@
     @Html.Hidden("nsUrl", (Uri)ViewBag.NSUrl)
     @Html.Hidden("oapsProfile", profileJson)
     @Html.Hidden("units", (string)ViewBag.Units)
+    @Html.Hidden("timezone", (string)ViewBag.TimeZone)
     <p>
         Ready to run Autotune now? Enter a few more details, then click Run Now to have us run Autotune for you.
     </p>

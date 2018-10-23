@@ -73,6 +73,7 @@ namespace AutotuneWeb.Controllers
                 warnings.Add("Temporary basal records in this Nightscout instance do not include a \"rate\" property - they will not be taken into account by Autotune");
 
             ViewBag.Warnings = warnings;
+            ViewBag.TimeZone = nsProfile.TimeZone;
             return View("Converted", oapsProfile);
         }
 
@@ -109,7 +110,7 @@ namespace AutotuneWeb.Controllers
             return combined.ToArray();
         }
 
-        public ActionResult RunJob(Uri nsUrl, string oapsProfile, string units, bool? uamAsBasal, decimal pumpBasalIncrement, decimal? min5MCarbImpact, string curve, string emailResultsTo)
+        public ActionResult RunJob(Uri nsUrl, string oapsProfile, string units, string timezone, bool? uamAsBasal, decimal pumpBasalIncrement, decimal? min5MCarbImpact, string curve, string emailResultsTo)
         {
             if (min5MCarbImpact != null || !String.IsNullOrEmpty(curve))
             {
@@ -130,11 +131,12 @@ namespace AutotuneWeb.Controllers
             {
                 con.Open();
 
-                cmd.CommandText = "INSERT INTO Jobs (NSUrl, Profile, CreatedAt, Units, CategorizeUAMAsBasal, PumpBasalIncrement, EmailResultsTo) VALUES (@NSUrl, @Profile, CURRENT_TIMESTAMP, @Units, @UAMAsBasal, @PumpBasalIncrement, @EmailResultsTo)";
+                cmd.CommandText = "INSERT INTO Jobs (NSUrl, Profile, CreatedAt, Units, TimeZone, CategorizeUAMAsBasal, PumpBasalIncrement, EmailResultsTo) VALUES (@NSUrl, @Profile, CURRENT_TIMESTAMP, @Units, @TimeZone, @UAMAsBasal, @PumpBasalIncrement, @EmailResultsTo)";
 
                 cmd.Parameters.AddWithValue("@NSUrl", nsUrl.ToString());
                 cmd.Parameters.AddWithValue("@Profile", oapsProfile.Replace("\r\n", "\n"));
                 cmd.Parameters.AddWithValue("@Units", units);
+                cmd.Parameters.AddWithValue("@TimeZone", timezone);
                 cmd.Parameters.AddWithValue("@UAMAsBasal", uamAsBasal.GetValueOrDefault());
                 cmd.Parameters.AddWithValue("@PumpBasalIncrement", pumpBasalIncrement);
                 cmd.Parameters.AddWithValue("@EmailResultsTo", emailResultsTo);

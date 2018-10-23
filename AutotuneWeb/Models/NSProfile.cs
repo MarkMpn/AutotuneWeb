@@ -29,6 +29,8 @@ namespace AutotuneWeb.Models
 
         public decimal Dia { get; set; }
 
+        public string TimeZone { get; set; }
+
         public NSValueWithTime[] CarbRatio { get; set; }
 
         [JsonProperty(PropertyName = "sens")]
