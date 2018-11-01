@@ -7,6 +7,7 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace AutotuneRunner
 {
@@ -75,6 +76,11 @@ namespace AutotuneRunner
                         // Indicate that we are now running the job
                         cmd.CommandText = "UPDATE Jobs SET ProcessingStarted = CURRENT_TIMESTAMP WHERE JobID = @JobID";
                         cmd.ExecuteNonQuery();
+
+                        // We're using user-input parameters in a bash command line, so validate that they are in the expected format
+                        // to prevent command injection attacks
+                        ValidateTimeZone(job.TimeZone);
+                        ValidateUrl(job.NSUrl);
 
                         // Save the profile to disk
                         var autotunePath = Path.Combine(Environment.GetEnvironmentVariable("AUTOTUNE_ROOT"), "autotunerunner-job-" + job.JobID);
@@ -223,6 +229,35 @@ namespace AutotuneRunner
                     cmd.Parameters.Remove(failedParam);
                 }
             }
+        }
+
+        private static void ValidateUrl(string nsUrl)
+        {
+            ValidateParameter(nsUrl);
+
+            // URL should be a valid https URL
+            if (!Uri.TryCreate(nsUrl, UriKind.Absolute, out Uri uri))
+                throw new FormatException();
+
+            if (uri.Scheme != "https")
+                throw new FormatException();
+        }
+
+        private static void ValidateTimeZone(string timeZone)
+        {
+            ValidateParameter(timeZone);
+
+            // Time zone name should be in format "Continent/Region(/SubRegion)"
+            if (!Regex.IsMatch(timeZone, "^[A-Za-z0-9\\-+_/]+$"))
+                throw new FormatException();
+        }
+
+        private static void ValidateParameter(string param)
+        {
+            // Check command line parameter does not contain any characters
+            // used to combine multiple commands
+            if (param.IndexOfAny(new[] { '&', '|', ';' }) != -1)
+                throw new FormatException();
         }
 
         private static string GetStripedBackground(int hr)
