@@ -42,6 +42,8 @@ namespace AutotuneWeb.Models
 
         public static NSProfileDetails LoadFromNightscout(Uri url)
         {
+            NSProfileDetails profile = null;
+
             // Get the profile from NS
             // Try looking for a Profile Switch event first
             var profileSwitchUrl = new Uri(url, "/api/v1/treatments.json?find[eventType][$eq]=Profile%20Switch&count=1");
@@ -55,9 +57,13 @@ namespace AutotuneWeb.Models
 
                 if (profileSwitches.Length == 1 && !String.IsNullOrEmpty(profileSwitches[0].ProfileJson))
                 {
-                    var profile = JsonConvert.DeserializeObject<NSProfileDetails>(profileSwitches[0].ProfileJson);
+                    profile = JsonConvert.DeserializeObject<NSProfileDetails>(profileSwitches[0].ProfileJson);
                     profile.Name = profileSwitches[0].Name;
-                    return profile;
+
+                    // Might get a profile but without a time zone - if so, store this profile but keep going to get
+                    // the timezone later on.
+                    if (!String.IsNullOrEmpty(profile.TimeZone))
+                        return profile;
                 }
             }
 
@@ -72,9 +78,16 @@ namespace AutotuneWeb.Models
                 var json = reader.ReadToEnd();
                 var profiles = JsonConvert.DeserializeObject<NSProfile>(json);
 
-                var profile = profiles.Store[profiles.DefaultProfile];
-                profile.Name = profiles.DefaultProfile;
-                return profile;
+                var defaultProfile = profiles.Store[profiles.DefaultProfile];
+
+                if (profile != null)
+                {
+                    profile.TimeZone = defaultProfile.TimeZone;
+                    return profile;
+                }
+
+                defaultProfile.Name = profiles.DefaultProfile;
+                return defaultProfile;
             }
         }
 

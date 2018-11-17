@@ -14,5 +14,6 @@ namespace AutotuneRunner
         public string Units { get; internal set; }
         public string TimeZone { get; internal set; }
         public bool UAMAsBasal { get; internal set; }
+        public int Days { get; set; }
     }
 }

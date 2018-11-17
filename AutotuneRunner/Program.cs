@@ -22,7 +22,7 @@ namespace AutotuneRunner
                 con.Open();
 
                 // Load in the jobs that haven't been run yet
-                cmd.CommandText = "SELECT TOP 1 JobID, NSUrl, Profile, PumpBasalIncrement, EmailResultsTo, Units, TimeZone, CategorizeUAMAsBasal FROM Jobs WHERE ProcessingStarted IS NULL ORDER BY JobID";
+                cmd.CommandText = "SELECT TOP 1 JobID, NSUrl, Profile, PumpBasalIncrement, EmailResultsTo, Units, TimeZone, CategorizeUAMAsBasal, DaysDuration FROM Jobs WHERE ProcessingStarted IS NULL ORDER BY JobID";
 
                 var profilesToRun = new List<Job>();
 
@@ -38,6 +38,7 @@ namespace AutotuneRunner
                         var units = reader.GetString(5);
                         var timezone = reader.GetString(6);
                         var uamAsBasal = reader.GetBoolean(7);
+                        var days = reader.GetInt32(8);
 
                         profilesToRun.Add(new Job
                         {
@@ -48,7 +49,8 @@ namespace AutotuneRunner
                             EmailResultsTo = email,
                             Units = units,
                             TimeZone = timezone,
-                            UAMAsBasal = uamAsBasal
+                            UAMAsBasal = uamAsBasal,
+                            Days = days
                         });
                     }
                 }
@@ -93,7 +95,7 @@ namespace AutotuneRunner
 
                         Environment.CurrentDirectory = autotunePath;
 
-                        var startDate = DateTime.Today.AddDays(-7);
+                        var startDate = DateTime.Today.AddDays(-job.Days);
                         var endDate = DateTime.Today.AddDays(-1);
                         var daysTotal = 7;
 

@@ -29,6 +29,12 @@ namespace AutotuneWeb.Controllers
                 return View("Index");
             }
 
+            if (nsUrl.Scheme != "https")
+            {
+                ModelState.AddModelError(nameof(nsUrl), "Please use https for your Nightscout URL");
+                return View("Index");
+            }
+
             Response.Cookies.Add(new HttpCookie("nsUrl", nsUrl.ToString()));
             ViewBag.NSUrl = nsUrl;
             NSProfileDetails nsProfile;
@@ -74,6 +80,7 @@ namespace AutotuneWeb.Controllers
 
             ViewBag.Warnings = warnings;
             ViewBag.TimeZone = nsProfile.TimeZone;
+            ViewBag.Email = Request.Cookies["email"]?.Value;
             return View("Converted", oapsProfile);
         }
 
@@ -110,7 +117,7 @@ namespace AutotuneWeb.Controllers
             return combined.ToArray();
         }
 
-        public ActionResult RunJob(Uri nsUrl, string oapsProfile, string units, string timezone, bool? uamAsBasal, decimal pumpBasalIncrement, decimal? min5MCarbImpact, string curve, string emailResultsTo)
+        public ActionResult RunJob(Uri nsUrl, string oapsProfile, string units, string timezone, bool? uamAsBasal, decimal pumpBasalIncrement, decimal? min5MCarbImpact, string curve, string emailResultsTo, int days)
         {
             if (min5MCarbImpact != null || !String.IsNullOrEmpty(curve))
             {
@@ -125,13 +132,16 @@ namespace AutotuneWeb.Controllers
                 oapsProfile = JsonConvert.SerializeObject(profile);
             }
 
+            // Cap the number of days to run Autotune over
+            days = Math.Min(days, 30);
+
             // Save the details of this job in the database
             using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["Sql"].ConnectionString))
             using (var cmd = con.CreateCommand())
             {
                 con.Open();
 
-                cmd.CommandText = "INSERT INTO Jobs (NSUrl, Profile, CreatedAt, Units, TimeZone, CategorizeUAMAsBasal, PumpBasalIncrement, EmailResultsTo) VALUES (@NSUrl, @Profile, CURRENT_TIMESTAMP, @Units, @TimeZone, @UAMAsBasal, @PumpBasalIncrement, @EmailResultsTo)";
+                cmd.CommandText = "INSERT INTO Jobs (NSUrl, Profile, CreatedAt, Units, TimeZone, CategorizeUAMAsBasal, PumpBasalIncrement, EmailResultsTo, DaysDuration) VALUES (@NSUrl, @Profile, CURRENT_TIMESTAMP, @Units, @TimeZone, @UAMAsBasal, @PumpBasalIncrement, @EmailResultsTo, @Days)";
 
                 cmd.Parameters.AddWithValue("@NSUrl", nsUrl.ToString());
                 cmd.Parameters.AddWithValue("@Profile", oapsProfile.Replace("\r\n", "\n"));
@@ -140,9 +150,12 @@ namespace AutotuneWeb.Controllers
                 cmd.Parameters.AddWithValue("@UAMAsBasal", uamAsBasal.GetValueOrDefault());
                 cmd.Parameters.AddWithValue("@PumpBasalIncrement", pumpBasalIncrement);
                 cmd.Parameters.AddWithValue("@EmailResultsTo", emailResultsTo);
+                cmd.Parameters.AddWithValue("@Days", days);
 
                 cmd.ExecuteNonQuery();
             }
+
+            Response.Cookies.Add(new HttpCookie("email", emailResultsTo));
 
             return View();
         }

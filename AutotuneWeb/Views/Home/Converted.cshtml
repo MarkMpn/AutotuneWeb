@@ -15,7 +15,7 @@
     <code>@ViewBag.TimeZone</code> timezone.
 </p>
 
-@{ 
+@{
     var warnings = (List<string>)ViewBag.Warnings;
 }
 @if (warnings != null && warnings.Count > 0)
@@ -132,11 +132,25 @@
     </div>
     <div class="row">
         <div class="col-md-4">
+            <label for="days">Days of Data</label>
+            <div class="input-group">
+                <input type="number" name="days" min="1" max="30" value="7" class="form-control" required />
+                <span class="input-group-addon">days</span>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="alert alert-info">
+                The number of days of data to be processed by Autotune (up to 30)
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
             <div class="form-group">
                 <label for="emailResultsTo">Email Results To</label>
                 <div class="input-group">
                     <span class="input-group-addon">@@</span>
-                    <input type="email" name="emailResultsTo" class="form-control" required />
+                    <input type="email" name="emailResultsTo" class="form-control" required value="@ViewBag.Email" />
                 </div>
             </div>
         </div>
