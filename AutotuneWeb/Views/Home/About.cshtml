@@ -22,32 +22,40 @@
 <dl>
     <dt>AutotuneWeb is using basals, ISF, or carb ratio that are not my current settings.</dt>
     <dd>AutotuneWeb pulls from your Nightscout Profile. Make sure your Nightscout Profile is up to date with the settings you would like AutotuneWeb to compare from when it runs.<//dd>
+    
     <dt>I get a warning about missing "rate" property in my temp basal data</dt>
     <dd>This is an extra bit of information that Autotune expects in the Nightscout data that isn't always added. If this data is missing then
     Autotune won't have a full picture of how much insulin has been delivered and therefore the recommendations will be out and should not be used.</dd>
+    
     <dt>I haven't received my results by email yet</dt>
     <dd>It can take 10 - 20 minutes to run, so be patient! Check your spam folder to make sure the results haven't been blocked.</dd>
+   
     <dt>The recommendations don't look right</dt>
     <dd>I'm not an expert on the interal workings of the Autotune program itself, and you should get the same results running Autotune here
     as if you did it youself. If the results don't look right, <strong>please don't use them</strong> and reach out on the Facebook groups
     for advice</dd>
+   
     <dt>Where can I learn more about Autotune?</dt>
     <dd><a href="https://openaps.readthedocs.io/en/latest/docs/Customize-Iterate/autotune.html">The official documentation is on the OpenAPS site</a>.
+    
     <dt>What do the colours mean on the results email?</dt>
     <dd>Any major changes suggested by Autotune are highlighted with either a yellow background (for changes above 10%) or a red background (+20% or -30%).
     While these suggestions may be correct, the highlights are there to draw your attention to them. Please exercise appropriate caution when making
     any changes to your settings based on these results.</dd>
+    
     <dt>What about the green &amp; red blocks next to the basal suggestions?</dt>
     <dd>In order to produce basal suggestions, Autotune needs to see BG data for each hour where any fluctuations are not due to other factors such as
     carbs. If all the BG data for an hour is dominated by other factors, it instead produces a suggestion based on averaging the basal rates for the
     surrounding hours. The green blocks indicate how many days Autotune used fluctuations in the BG data to produce the suggestion, and the red blocks
     indicate how many days it interpolated a result based on the surrounding hours.</dd>
+    
     <dt>Why is the distinction between basal suggestions based on BG fluctuations and interpolating other basal rates important?</dt>
     <dd>If you have a basal profile in which you have a different basal rate at a time of day when you normally have carbs on board as well, Autotune
     will tend to flatten out that different basal rate and compensate with a corresponding change to the carb ratio. Depending on the underlying reason
     for your different basal rate, this may be correct but also may cause it to suggest a lower basal rate that will lead to high BGs at the affected time
     and also a stronger carb ratio that may lead to lows at other times. If you see a lot of red blocks in your basal suggestions, please take extra care
     before enacting any changes based on the information in the results.</dd>
+    
     <dt>How can I see what this site is doing with my data?</dt>
     <dd>All the code for this site is open source, so feel free to look at <a href="https://github.com/MarkMpn/AutotuneWeb">the GitHub repo</a> to see
     exactly what it's doing.</dd>
