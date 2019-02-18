@@ -6,7 +6,10 @@
 
 <div class="jumbotron">
     <h1>Autotune</h1>
-    <p class="lead">First, ensure your Nightscout profile is up to date. Then enter your Nightscout site URL to get started.</p>
+    <p class="lead">
+        <strong>Step 1</strong> - ensure your Nightscout profile is up to date [<a href="@Url.Action("About")#profile">why?</a>]<br/>
+        <strong>Step 2</strong> - enter your Nightscout site URL to get started
+    </p>
     @using (Html.BeginForm("Autotune", "Home"))
     {
         <div class="form-group">
