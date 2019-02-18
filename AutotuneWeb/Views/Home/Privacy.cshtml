@@ -1,0 +1,65 @@
+﻿@{ 
+    ViewBag.Title = "Privacy";
+}
+<h2>@ViewBag.Title</h2>
+
+<p>
+    When you use this site, a few basic details such as browser type and IP address may be logged as part of standard telemetry details to help diagnose
+    any problems with the site.
+</p>
+
+<p>
+    If you use this site to convert your Nightscout profile to OpenAPS format in order to run Autotune yourself, no details are logged of your Nightscout
+    URL or profile details.
+</p>
+
+<p>
+    If you choose to use the option to have the Autotune process run for you on this site, your Nightscout URL and associated profile details extracted from
+    it will be stored, along with the additional details you enter such as your email address, in order to perform the Autotune process and send the results
+    back.
+</p>
+
+<p>
+    Your data will be held on databases and virtual machines in the cloud, and returned via email. While reasonable efforts will be made to keep this data
+    secure, there can be no guarantees. If you are not comfortable with this, please do not use this site.
+</p>
+
+<p>
+    Your data will not be shared with anyone else. Some data will be retained in order to diagnose problems and identify if additional processing capacity is
+    needed or if individual users are overloading the system:
+</p>
+<ul>
+    <li>Nightscout URL</li>
+    <li>Email Address</li>
+    <li>Profile Details</li>
+    <li>Autotune result summary</li>
+    <li>Processing date &amp; time</li>
+</ul>
+
+<p>
+    Please note that, as a private individual, the requirements of GDPR do not apply to this service. However, if you wish to have any of your data deleted
+    that may be stored, please enter your Nightscout URL and email address here and any associated details will be deleted immediately:
+</p>
+
+@using (Html.BeginForm("Delete", "Home"))
+{
+    <div class="form-group">
+        <label for="url">Nightscout URL</label>
+        <div class="input-group">
+            <span class="input-group-addon">
+                <i class="fa fa-globe"></i>
+            </span>
+            <input type="url" name="url" class="form-control" required placeholder="https://mynightscout.azurewebsites.net/" />
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="email">Email Address</label>
+        <div class="input-group">
+            <span class="input-group-addon">@@</span>
+            <input type="email" name="email" class="form-control" required value="@ViewBag.Email" />
+        </div>
+    </div>
+    <div>
+        <input type="submit" class="btn btn-danger" value="Delete"/>
+    </div>
+}

@@ -108,7 +108,7 @@ namespace AutotuneWeb.Controllers
         {
             var combined = new List<NSValueWithTime>();
 
-            for(var i = 0; i < values.Length; i++)
+            for (var i = 0; i < values.Length; i++)
             {
                 if (i == 0 || combined.Last().Value != values[i].Value)
                     combined.Add(values[i]);
@@ -164,10 +164,32 @@ namespace AutotuneWeb.Controllers
         {
             return View();
         }
-    
+
         public ActionResult MissingRate()
         {
             return View();
+        }
+
+        public ActionResult Privacy()
+        {
+            return View();
+        }
+
+        public ActionResult Delete(string url, string email)
+        {
+            using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["Sql"].ConnectionString))
+            using (var cmd = con.CreateCommand())
+            {
+                con.Open();
+
+                cmd.CommandText = "DELETE FROM Jobs WHERE NSUrl = @url AND EmailResultsTo = @email";
+                cmd.Parameters.AddWithValue("@url", url);
+                cmd.Parameters.AddWithValue("@email", email);
+
+                var deleted = cmd.ExecuteNonQuery();
+
+                return View(deleted);
+            }
         }
     }
 }

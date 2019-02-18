@@ -1,0 +1,18 @@
+﻿@Model int
+@{ 
+    ViewBag.Title = "Data Deleted";
+}
+<h2>@ViewBag.Title</h2>
+
+@if (Model == 0)
+{
+    <p>Sorry, no data could be found with that URL and Email Address to delete</p>
+}
+else if (Model == 1)
+{
+    <p>1 entry was found and deleted that match that URL and Email Address</p>
+}
+else
+{
+    <p>@Model entries were found and deleted that match that URL and Email Address</p>
+}

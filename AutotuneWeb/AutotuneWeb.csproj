@@ -222,6 +222,8 @@
     <Content Include="Views\Home\Converted.cshtml" />
     <Content Include="Views\Home\RunJob.cshtml" />
     <Content Include="Views\Home\MissingRate.cshtml" />
+    <Content Include="Views\Home\Privacy.cshtml" />
+    <Content Include="Views\Home\Delete.cshtml" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
