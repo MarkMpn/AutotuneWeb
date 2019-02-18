@@ -224,6 +224,7 @@
     <Content Include="Views\Home\MissingRate.cshtml" />
     <Content Include="Views\Home\Privacy.cshtml" />
     <Content Include="Views\Home\Delete.cshtml" />
+    <Content Include="Views\Home\AlreadyRunning.cshtml" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

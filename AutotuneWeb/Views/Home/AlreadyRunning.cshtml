@@ -1,0 +1,23 @@
+﻿@{ 
+    if (ViewBag.JobStarted == null)
+    {
+        ViewBag.Title = "Already Queued";
+    }
+    else
+    {
+        ViewBag.Title = "Already Running";
+    }
+}
+<h2>@ViewBag.Title</h2>
+
+@if (ViewBag.JobStarted == null)
+{
+    <p>Your job is already in the queue, and is currently in position <span class="font-size: 2em">@ViewBag.QueuePos</span>.</p>
+}
+else
+{
+    <p>Your job is already running. It started at @ViewBag.JobStarted, and has been running for @((DateTime.Now - (DateTime)ViewBag.JobStarted).TotalMinutes)
+    minutes.</p>
+}
+
+<p>Please be patient and you will get your results by email as soon as it is complete.</p>

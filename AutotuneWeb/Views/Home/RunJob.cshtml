@@ -1,9 +1,10 @@
-﻿@{ 
+﻿@model int
+@{ 
     ViewBag.Title = "Autotune Running";
 }
 
 <h1>Autotune Running</h1>
 
 <p>
-    Thank you, your job will start running shortly. You should receive the results by email in 10 - 20 minutes.
+    Thank you, your job has been accepted and is position <span style="font-size: 2em">@Model</span> in the queue. 
 </p>
