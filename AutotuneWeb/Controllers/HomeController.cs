@@ -142,6 +142,15 @@ namespace AutotuneWeb.Controllers
             {
                 con.Open();
 
+                cmd.Parameters.AddWithValue("@NSUrl", nsUrl.ToString());
+                cmd.Parameters.AddWithValue("@Profile", oapsProfile.Replace("\r\n", "\n"));
+                cmd.Parameters.AddWithValue("@Units", units);
+                cmd.Parameters.AddWithValue("@TimeZone", timezone);
+                cmd.Parameters.AddWithValue("@UAMAsBasal", uamAsBasal.GetValueOrDefault());
+                cmd.Parameters.AddWithValue("@PumpBasalIncrement", pumpBasalIncrement);
+                cmd.Parameters.AddWithValue("@EmailResultsTo", emailResultsTo);
+                cmd.Parameters.AddWithValue("@Days", days);
+
                 // Check if the same job is already running
                 cmd.CommandText = "SELECT JobID, ProcessingStarted FROM Jobs WHERE NSUrl = @NSUrl AND Profile = @Profile AND CategorizeUAMAsBasal = @UAMAsBasal AND ProcessingCompleted IS NULL";
                 var existingId = 0;
@@ -159,9 +168,7 @@ namespace AutotuneWeb.Controllers
                 {
                     if (existingJobStarted == null)
                     {
-                        cmd.CommandText = "SELECT max(JobID) FROM Jobs WHERE PRocessingStarted IS NULL";
-                        var queueStartId = (int)cmd.ExecuteScalar();
-                        queuePos = existingId - queueStartId + 1;
+                        queuePos = GetQueuePos(cmd, existingId);
                         ViewBag.QueuePos = queuePos;
                     }
 
@@ -169,30 +176,26 @@ namespace AutotuneWeb.Controllers
                     return View("AlreadyRunning");
                 }
 
-                cmd.Parameters.AddWithValue("@NSUrl", nsUrl.ToString());
-                cmd.Parameters.AddWithValue("@Profile", oapsProfile.Replace("\r\n", "\n"));
-                cmd.Parameters.AddWithValue("@Units", units);
-                cmd.Parameters.AddWithValue("@TimeZone", timezone);
-                cmd.Parameters.AddWithValue("@UAMAsBasal", uamAsBasal.GetValueOrDefault());
-                cmd.Parameters.AddWithValue("@PumpBasalIncrement", pumpBasalIncrement);
-                cmd.Parameters.AddWithValue("@EmailResultsTo", emailResultsTo);
-                cmd.Parameters.AddWithValue("@Days", days);
-
                 cmd.CommandText = "INSERT INTO Jobs (NSUrl, Profile, CreatedAt, Units, TimeZone, CategorizeUAMAsBasal, PumpBasalIncrement, EmailResultsTo, DaysDuration) VALUES (@NSUrl, @Profile, CURRENT_TIMESTAMP, @Units, @TimeZone, @UAMAsBasal, @PumpBasalIncrement, @EmailResultsTo, @Days)";
                 cmd.ExecuteNonQuery();
 
-                cmd.CommandText = "SELECT @@IDENTITY, max(JobID) FROM Jobs WHERE ProcessingStarted IS NULL";
-                using (var reader = cmd.ExecuteReader())
-                {
-                    var id = reader.GetInt32(0);
-                    var queueStartId = reader.GetInt32(1);
-                    queuePos = id - queueStartId + 1;
-                }
+                cmd.CommandText = "SELECT @@IDENTITY";
+                var id = Convert.ToInt32(cmd.ExecuteScalar());
+                
+                queuePos = GetQueuePos(cmd, id);
             }
 
             Response.Cookies.Add(new HttpCookie("email", emailResultsTo));
 
             return View(queuePos);
+        }
+
+        private int GetQueuePos(SqlCommand cmd, int jobId)
+        {
+            cmd.CommandText = "SELECT count(*) FROM Jobs WHERE ProcessingStarted IS NULL AND JobID <= @JobID";
+            cmd.Parameters.AddWithValue("@JobID", jobId);
+
+            return (int)cmd.ExecuteScalar();
         }
 
         public ActionResult About()
