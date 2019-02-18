@@ -6,7 +6,10 @@
 
 <div class="jumbotron">
     <h1>Autotune</h1>
-    <p class="lead">Enter your Nightscout site URL to get started.</p>
+    <p class="lead">
+        <strong>Step 1</strong> - ensure your Nightscout profile is up to date [<a href="@Url.Action("About")#profile">why?</a>]<br/>
+        <strong>Step 2</strong> - enter your Nightscout site URL to get started
+    </p>
     @using (Html.BeginForm("Autotune", "Home"))
     {
         <div class="form-group">
@@ -45,7 +48,7 @@
     <div class="col-md-4">
         <h2>Support</h2>
         <p>
-            For help with Autotune generally or AutotuneWeb in particular, reach out in the regular Facebook groups or Gitter channels
+            For help with Autotune generally or AutotuneWeb in particular, first read the AutotuneWeb FAQs. If your question is not answered there, reach out in the <a href="https://openaps.readthedocs.io/en/latest/docs/Understanding%20OpenAPS-Overview/communication-support-channels.html#facebook">regular Facebook groups</a> or <a href="https://gitter.im/openaps/autotune">Gitter channel</a>. Make sure you note that you are using AutotuneWeb.
         </p>
     </div>
 </div>
