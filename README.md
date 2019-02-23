@@ -24,7 +24,7 @@ To implement this there are several resources required. This has been designed t
 Create an Azure SQL Database and create a table `Jobs` as follows:
 
 ```sql
-CREATE TABLE [dbo].[Jobs](
+CREATE TABLE [dbo].[Jobs] (
 	[JobID] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
 	[NSUrl] [varchar](255) NOT NULL,
 	[Profile] [varchar](max) NOT NULL,
@@ -36,7 +36,9 @@ CREATE TABLE [dbo].[Jobs](
 	[ProcessingStarted] [datetime] NULL,
 	[ProcessingCompleted] [datetime] NULL,
 	[Result] [varchar](max) NULL,
-	[Failed] [bit] NULL
+	[Failed] [bit] NULL,
+	[TimeZone] [varchar](100) NULL,
+	[DaysDuration] [int] NOT NULL
 )
 ```
 
