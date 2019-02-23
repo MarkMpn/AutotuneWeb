@@ -128,7 +128,7 @@ namespace AutotuneWeb.Models
 
         private decimal ToMgDl(decimal value)
         {
-            if (this.Units == "mmol")
+            if (this.Units.ToLower().Contains("mmol"))
                 return value * 18;
 
             return value;
