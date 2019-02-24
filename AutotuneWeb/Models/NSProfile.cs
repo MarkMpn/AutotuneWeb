@@ -13,6 +13,8 @@ namespace AutotuneWeb.Models
         public string DefaultProfile { get; set; }
 
         public IDictionary<string,NSProfileDetails> Store { get; set; }
+
+        public string Units { get; set; }
     }
 
     public class NSProfileSwitch
@@ -83,10 +85,12 @@ namespace AutotuneWeb.Models
                 if (profile != null)
                 {
                     profile.TimeZone = defaultProfile.TimeZone;
+                    profile.Units = profile.Units ?? profiles.Units;
                     return profile;
                 }
 
                 defaultProfile.Name = profiles.DefaultProfile;
+                defaultProfile.Units = defaultProfile.Units ?? profiles.Units;
                 return defaultProfile;
             }
         }
@@ -128,7 +132,7 @@ namespace AutotuneWeb.Models
 
         private decimal ToMgDl(decimal value)
         {
-            if (this.Units.ToLower().Contains("mmol"))
+            if (this.Units?.ToLower().Contains("mmol") == true)
                 return value * 18;
 
             return value;
