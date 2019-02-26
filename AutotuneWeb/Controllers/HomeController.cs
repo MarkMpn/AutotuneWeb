@@ -1,4 +1,9 @@
 ﻿using AutotuneWeb.Models;
+using Microsoft.Azure.Batch;
+using Microsoft.Azure.Batch.Auth;
+using Microsoft.Azure.Batch.Common;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -183,6 +188,10 @@ namespace AutotuneWeb.Controllers
                 var id = Convert.ToInt32(cmd.ExecuteScalar());
                 
                 queuePos = GetQueuePos(cmd, id);
+
+                var jobName = $"autotune-job-{id}";
+                var profileUrl = SaveProfileToStorage(jobName, oapsProfile, out var containerUrl);
+                CreateBatchJob(jobName, id, profileUrl, containerUrl, nsUrl.ToString(), days, timezone);
             }
 
             Response.Cookies.Add(new HttpCookie("email", emailResultsTo));
@@ -196,6 +205,104 @@ namespace AutotuneWeb.Controllers
             cmd.Parameters.AddWithValue("@JobID", jobId);
 
             return (int)cmd.ExecuteScalar();
+        }
+
+        private string SaveProfileToStorage(string jobName, string profile, out string containerUrl)
+        {
+            // Connect to Azure Storage
+            var connectionString = ConfigurationManager.ConnectionStrings["Storage"].ConnectionString;
+            var storageAccount = CloudStorageAccount.Parse(connectionString);
+            var cloudBlobClient = storageAccount.CreateCloudBlobClient();
+
+            // Create container for the job
+            var container = cloudBlobClient.GetContainerReference(jobName);
+            container.Create();
+
+            // Get a SAS URL for the container. This should allow write access to the container for the next 24 hours only
+            // to allow the job to upload results
+            var containerSasConstrains = new SharedAccessBlobPolicy
+            {
+                SharedAccessStartTime = DateTimeOffset.UtcNow.AddMinutes(-5),
+                SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddHours(24),
+                Permissions = SharedAccessBlobPermissions.Read | SharedAccessBlobPermissions.Write
+            };
+
+            // Generate the shared access signature on the container, setting the constraints directly on the signature
+            var sasContainerToken = container.GetSharedAccessSignature(containerSasConstrains);
+            containerUrl = container.Uri + sasContainerToken;
+
+            // Create the profile.json blob in the container
+            var blob = container.GetBlockBlobReference("profile.json");
+            blob.UploadText(profile);
+
+            // Get a SAS URL for the blob. This should allow read access to the profile for the next 24 hours only
+            var blobSasConstraints = new SharedAccessBlobPolicy
+            {
+                SharedAccessStartTime = DateTimeOffset.UtcNow.AddMinutes(-5),
+                SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddHours(24),
+                Permissions = SharedAccessBlobPermissions.Read
+            };
+
+            // Generate the shared access signature on the blob, setting the constraints directly on the signature.
+            var sasBlobToken = blob.GetSharedAccessSignature(blobSasConstraints);
+
+            // Return the URI string for the blob, including the SAS token.
+            return blob.Uri + sasBlobToken;
+        }
+
+        private void CreateBatchJob(string jobName, int id, string profileUrl, string containerUrl, string nsUrl, int daysDuration, string timeZone)
+        {
+            // Connect to Azure Batch
+            var credentials = new BatchSharedKeyCredentials(
+                ConfigurationManager.AppSettings["BatchAccountUrl"],
+                ConfigurationManager.AppSettings["BatchAccountName"],
+                ConfigurationManager.AppSettings["BatchAccountKey"]);
+
+            using (var batchClient = BatchClient.Open(credentials))
+            {
+                var poolId = ConfigurationManager.AppSettings["BatchPoolId"];
+
+                // Create the job
+                var job = batchClient.JobOperations.CreateJob();
+                job.Id = jobName;
+                job.PoolInformation = new PoolInformation { PoolId = poolId };
+                job.Commit();
+
+                // Add a task to the job to run Autotune
+                var commandLine = "/bin/sh -c '" +
+                    "cd \"$AZ_BATCH_TASK_WORKING_DIR\" && " +
+                    "mkdir -p settings && " +
+                    "mv profile.json settings && " +
+                    "cp settings/profile.json settings/pumpprofile.json && " +
+                    "cp settings/profile.json settings/autotune.json && " +
+                    $"TZ='{timeZone}' && " +
+                    "export TZ && " +
+                    $"oref0-autotune --dir=$AZ_BATCH_TASK_WORKING_DIR --ns-host={nsUrl} --start-date={DateTime.Now.AddDays(-daysDuration - 1):yyyy-MM-dd}" +
+                    "'";
+
+                var task = new CloudTask("Autotune", commandLine);
+
+                // The task needs to use the profile.json file previously added to Azure Storage
+                task.ResourceFiles.Add(ResourceFile.FromUrl(profileUrl, "profile.json"));
+
+                // Capture the recommendations generated by Autotune into Azure Storage
+                task.OutputFiles.Add(new OutputFile(
+                    filePattern: "autotune/autotune_recommendations.log", 
+                    destination: new OutputFileDestination(new OutputFileBlobContainerDestination(containerUrl)), 
+                    uploadOptions: new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)));
+                task.OutputFiles.Add(new OutputFile(
+                    filePattern: "autotune/autotune.*.log",
+                    destination: new OutputFileDestination(new OutputFileBlobContainerDestination(containerUrl)),
+                    uploadOptions: new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)));
+                batchClient.JobOperations.AddTask(jobName, task);
+
+                // Get the URL for the JobFinished action that the recommendations can be uploaded to to generate the email
+                var uploadUrl = new Uri(Request.Url, Url.Action("JobFinished", "Results", new { id }));
+                var uploadCommandLine = $"wget {uploadUrl}";
+                var uploadTask = new CloudTask("Upload", uploadCommandLine);
+                uploadTask.DependsOn = TaskDependencies.OnId(task.Id);
+                batchClient.JobOperations.AddTask(jobName, uploadTask);
+            }
         }
 
         public ActionResult About()
