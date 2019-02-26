@@ -32,29 +32,17 @@ namespace AutotuneWeb.Controllers
             using (var cmd = con.CreateCommand())
             {
                 // Load the job details from the database
-                string emailAddress;
-                decimal pumpBasalIncrement;
-                string units;
+                var job = Job.Load(con, id);
+                if (job == null)
+                    return HttpNotFound();
+
                 var result = "";
                 var success = false;
                 var startTime = (DateTime?)null;
                 var endTime = (DateTime?)null;
                 var emailBody = (string)null;
                 var attachments = new CloudBlob[0];
-
-                cmd.CommandText = "SELECT EmailResultsTo, PumpBasalIncrement, Units FROM Jobs WHERE JobId = @Id";
-                cmd.Parameters.AddWithValue("@Id", id);
-
-                using (var reader = cmd.ExecuteReader())
-                {
-                    if (!reader.Read())
-                        return HttpNotFound();
-
-                    emailAddress = reader.GetString(0);
-                    pumpBasalIncrement = reader.GetDecimal(1);
-                    units = reader.GetString(2);
-                }
-
+                
                 try
                 {
                     var jobName = $"autotune-job-{id}";
@@ -87,7 +75,7 @@ namespace AutotuneWeb.Controllers
                             result = reader.ReadToEnd();
 
                             // Parse the results
-                            var parsedResults = AutotuneResults.ParseResult(result, pumpBasalIncrement, units.ToLower().Contains("mmol"));
+                            var parsedResults = AutotuneResults.ParseResult(result, job);
 
                             emailBody = RenderViewToString(ControllerContext, "Email/Success", parsedResults);
                         }
@@ -108,7 +96,7 @@ namespace AutotuneWeb.Controllers
                 if (emailBody == null)
                     emailBody = RenderViewToString(ControllerContext, "Email/Failure");
 
-                EmailResults(emailAddress, emailBody, attachments);
+                EmailResults(job.EmailResultsTo, emailBody, attachments);
 
                 // Update the details in the SQL database
                 cmd.CommandText = "UPDATE Jobs SET ProcessingStarted = @ProcessingStarted, ProcessingCompleted = @ProcessingCompleted, Result = @Result, Failed = @Failed WHERE JobID = @Id";

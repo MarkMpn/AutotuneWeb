@@ -11,6 +11,7 @@ namespace AutotuneWeb.Models
         {
         }
 
+        public Job Job { get; set; }
         public decimal PumpISF { get; set; }
         public decimal AutotuneISF { get; set; }
         public decimal PumpCR { get; set; }
@@ -20,7 +21,7 @@ namespace AutotuneWeb.Models
         public decimal[] SuggestedBasals { get; set; }
         public int[] DaysMissed { get; set; }
 
-        public static AutotuneResults ParseResult(string result, decimal basalIncrement, bool mmol)
+        public static AutotuneResults ParseResult(string result, Job job)
         {
             // Split the output into lines
             var lines = result.Trim().Split('\n');
@@ -81,6 +82,7 @@ namespace AutotuneWeb.Models
             }
 
             var output = new AutotuneResults();
+            output.Job = job;
             output.PumpISF = pumpOutput["ISF [mg/dL/U]"].Value;
             output.AutotuneISF = autotuneOutput["ISF [mg/dL/U]"];
             output.PumpCR = pumpOutput["Carb Ratio[g/U]"].Value;
@@ -94,12 +96,12 @@ namespace AutotuneWeb.Models
             {
                 output.PumpBasals[hour] = pumpOutput[$"{hour:00}:00"] ?? output.PumpBasals[hour - 1];
                 output.AutotuneBasals[hour] = autotuneOutput[$"{hour:00}:00"];
-                output.SuggestedBasals[hour] = Math.Round(output.AutotuneBasals[hour] / basalIncrement) * basalIncrement;
+                output.SuggestedBasals[hour] = Math.Round(output.AutotuneBasals[hour] / job.PumpBasalIncrement) * job.PumpBasalIncrement;
                 output.DaysMissed[hour] = daysMissed[$"{hour:00}:00"];
             }
 
             // If we want to get results in mmol, convert now
-            if (mmol)
+            if (job.Units.ToLower().Contains("mmol"))
             {
                 output.PumpISF /= 18;
                 output.AutotuneISF /= 18;
