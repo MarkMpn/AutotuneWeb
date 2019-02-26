@@ -16,8 +16,12 @@
 }
 else
 {
-    <p>Your job is already running. It started at @(((DateTime)ViewBag.JobStarted).ToString("HH:mm")), and has been running for @((DateTime.Now - (DateTime)ViewBag.JobStarted).TotalMinutes)
-    minutes.</p>
+    var jobStarted = (DateTime)ViewBag.JobStarted;
+    var runtime = (DateTime.Now - jobStarted).TotalMinutes.ToString("0");
+    <p>
+        Your job is already running. It started at @(jobStarted.ToString("HH:mm")), and has been running for @runtime
+        @(runtime == "1" ? "minute" : "minutes").
+    </p>
 }
 
 <p>Please be patient and you will get your results by email as soon as it is complete.</p>

@@ -183,7 +183,10 @@ namespace AutotuneWeb.Controllers
                     }
 
                     if (existingJobStarted == null)
+                    {
                         queuePos = GetQueuePos(cmd, existingId);
+                        ViewBag.QueuePos = queuePos;
+                    }
 
                     ViewBag.JobStarted = existingJobStarted;
                     return View("AlreadyRunning");
