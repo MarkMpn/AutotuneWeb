@@ -268,6 +268,7 @@ namespace AutotuneWeb.Controllers
                 job.Id = jobName;
                 job.PoolInformation = new PoolInformation { PoolId = poolId };
                 job.UsesTaskDependencies = true;
+                job.OnAllTasksComplete = OnAllTasksComplete.TerminateJob;
                 job.Commit();
 
                 // Add a task to the job to run Autotune

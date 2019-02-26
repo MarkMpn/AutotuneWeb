@@ -134,7 +134,7 @@ namespace AutotuneWeb.Controllers
                     msg.AddAttachment(attachment.Name, Convert.ToBase64String(stream.ToArray()));
                 }
             }
-
+            
             client.SendEmailAsync(msg).Wait();
         }
 
