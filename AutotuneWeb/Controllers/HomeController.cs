@@ -191,7 +191,7 @@ namespace AutotuneWeb.Controllers
 
                 var jobName = $"autotune-job-{id}";
                 var profileUrl = SaveProfileToStorage(jobName, oapsProfile, out var containerUrl);
-                CreateBatchJob(jobName, id, profileUrl, containerUrl, nsUrl.ToString(), days, timezone);
+                CreateBatchJob(jobName, id, profileUrl, containerUrl, nsUrl.ToString(), days, timezone, uamAsBasal.GetValueOrDefault());
             }
 
             Response.Cookies.Add(new HttpCookie("email", emailResultsTo));
@@ -250,7 +250,7 @@ namespace AutotuneWeb.Controllers
             return blob.Uri + sasBlobToken;
         }
 
-        private void CreateBatchJob(string jobName, int id, string profileUrl, string containerUrl, string nsUrl, int daysDuration, string timeZone)
+        private void CreateBatchJob(string jobName, int id, string profileUrl, string containerUrl, string nsUrl, int daysDuration, string timeZone, bool uamAsBasal)
         {
             // Connect to Azure Batch
             var credentials = new BatchSharedKeyCredentials(
@@ -277,7 +277,7 @@ namespace AutotuneWeb.Controllers
                     "cp settings/profile.json settings/autotune.json && " +
                     $"TZ='{timeZone}' && " +
                     "export TZ && " +
-                    $"oref0-autotune --dir=$AZ_BATCH_TASK_WORKING_DIR --ns-host={nsUrl} --start-date={DateTime.Now.AddDays(-daysDuration - 1):yyyy-MM-dd}" +
+                    $"oref0-autotune --dir=$AZ_BATCH_TASK_WORKING_DIR --ns-host={nsUrl} --start-date={DateTime.Now.AddDays(-daysDuration):yyyy-MM-dd} --end-date={DateTime.Now.AddDays(-1):yyyy-MM-dd} --categorize-uam-as-basal={(uamAsBasal ? "true" : "false")}" +
                     "'";
 
                 var task = new CloudTask("Autotune", commandLine);
