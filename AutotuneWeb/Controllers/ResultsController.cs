@@ -87,7 +87,7 @@ namespace AutotuneWeb.Controllers
                     // Get the log files to attach to the email
                     attachments = container.ListBlobs()
                         .Select(b => new CloudBlockBlob(b.Uri, cloudBlobClient))
-                        .Where(b => b.Name != "autotune_recommendations.log")
+                        .Where(b => b.Name != "autotune_recommendations.log" && b.Name != "profile.json")
                         .ToArray();
                 }
                 catch (Exception ex)
