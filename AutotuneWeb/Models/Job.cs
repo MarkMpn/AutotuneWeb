@@ -26,6 +26,8 @@ namespace AutotuneWeb.Models
             using (var cmd = con.CreateCommand())
             {
                 cmd.CommandText = "SELECT NSUrl, Profile, PumpBasalIncrement, EmailResultsTo, Units, TimeZone, CategorizeUAMAsBasal, DaysDuration FROM Jobs WHERE JobID = @Id";
+                cmd.Parameters.AddWithValue("@Id", id);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     if (!reader.Read())

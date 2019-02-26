@@ -71,6 +71,9 @@
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="SendGrid, Version=9.10.0.0, Culture=neutral, PublicKeyToken=4f047e93159395ca, processorArchitecture=MSIL">
+      <HintPath>..\packages\Sendgrid.9.10.0\lib\net452\SendGrid.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -259,8 +262,8 @@
     <Content Include="Views\Home\Privacy.cshtml" />
     <Content Include="Views\Home\Delete.cshtml" />
     <Content Include="Views\Home\AlreadyRunning.cshtml" />
-    <Content Include="Views\Email\Failure.cshtml" />
-    <Content Include="Views\Email\Success.cshtml" />
+    <Content Include="Views\Results\Failure.cshtml" />
+    <Content Include="Views\Results\Success.cshtml" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

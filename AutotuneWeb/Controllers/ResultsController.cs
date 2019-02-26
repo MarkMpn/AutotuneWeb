@@ -5,6 +5,8 @@ using Microsoft.Azure.Batch.Common;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
+using SendGrid;
+using SendGrid.Helpers.Mail;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -29,8 +31,9 @@ namespace AutotuneWeb.Controllers
 
             using (var batchClient = BatchClient.Open(credentials))
             using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["Sql"].ConnectionString))
-            using (var cmd = con.CreateCommand())
             {
+                con.Open();
+
                 // Load the job details from the database
                 var job = Job.Load(con, id);
                 if (job == null)
@@ -77,7 +80,7 @@ namespace AutotuneWeb.Controllers
                             // Parse the results
                             var parsedResults = AutotuneResults.ParseResult(result, job);
 
-                            emailBody = RenderViewToString(ControllerContext, "Email/Success", parsedResults);
+                            emailBody = RenderViewToString(ControllerContext, "Success", parsedResults);
                         }
                     }
 
@@ -94,17 +97,21 @@ namespace AutotuneWeb.Controllers
                 }
 
                 if (emailBody == null)
-                    emailBody = RenderViewToString(ControllerContext, "Email/Failure");
+                    emailBody = RenderViewToString(ControllerContext, "Failure");
 
                 EmailResults(job.EmailResultsTo, emailBody, attachments);
 
                 // Update the details in the SQL database
-                cmd.CommandText = "UPDATE Jobs SET ProcessingStarted = @ProcessingStarted, ProcessingCompleted = @ProcessingCompleted, Result = @Result, Failed = @Failed WHERE JobID = @Id";
-                cmd.Parameters.AddWithValue("@ProcessingStarted", (object)startTime ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@ProcessingCompleted", (object)endTime ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Result", result);
-                cmd.Parameters.AddWithValue("@Failed", !success);
-                cmd.ExecuteNonQuery();
+                using (var cmd = con.CreateCommand())
+                {
+                    cmd.CommandText = "UPDATE Jobs SET ProcessingStarted = @ProcessingStarted, ProcessingCompleted = @ProcessingCompleted, Result = @Result, Failed = @Failed WHERE JobID = @Id";
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    cmd.Parameters.AddWithValue("@ProcessingStarted", (object)startTime ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ProcessingCompleted", (object)endTime ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Result", result);
+                    cmd.Parameters.AddWithValue("@Failed", !success);
+                    cmd.ExecuteNonQuery();
+                }
             }
 
             return Content("");
