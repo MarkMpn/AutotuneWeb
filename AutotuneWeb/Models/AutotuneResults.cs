@@ -5,7 +5,7 @@ using System.Text;
 
 namespace AutotuneWeb.Models
 {
-    class AutotuneResults
+    public class AutotuneResults
     {
         private AutotuneResults()
         {
