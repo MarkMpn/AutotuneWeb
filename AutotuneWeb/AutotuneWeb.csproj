@@ -264,6 +264,7 @@
     <Content Include="Views\Home\AlreadyRunning.cshtml" />
     <Content Include="Views\Results\Failure.cshtml" />
     <Content Include="Views\Results\Success.cshtml" />
+    <Content Include="Views\Results\BasalDaysMissed.cshtml" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
