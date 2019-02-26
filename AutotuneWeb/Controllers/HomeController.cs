@@ -157,25 +157,33 @@ namespace AutotuneWeb.Controllers
                 cmd.Parameters.AddWithValue("@Days", days);
 
                 // Check if the same job is already running
-                cmd.CommandText = "SELECT JobID, ProcessingStarted FROM Jobs WHERE NSUrl = @NSUrl AND Profile = @Profile AND CategorizeUAMAsBasal = @UAMAsBasal AND ProcessingCompleted IS NULL";
+                cmd.CommandText = "SELECT JobID FROM Jobs WHERE NSUrl = @NSUrl AND Profile = @Profile AND CategorizeUAMAsBasal = @UAMAsBasal AND ProcessingCompleted IS NULL";
                 var existingId = 0;
                 DateTime? existingJobStarted = null;
                 using (var reader = cmd.ExecuteReader())
                 {
                     if (reader.Read())
-                    { 
                         existingId = reader.GetInt32(0);
-                        existingJobStarted = reader.IsDBNull(1) ? (DateTime?) null : reader.GetDateTime(1);
-                    }
                 }
 
                 if (existingId != 0)
                 {
-                    if (existingJobStarted == null)
+                    // Get the job details from Azure Batch
+                    var credentials = new BatchSharedKeyCredentials(
+                        ConfigurationManager.AppSettings["BatchAccountUrl"],
+                        ConfigurationManager.AppSettings["BatchAccountName"],
+                        ConfigurationManager.AppSettings["BatchAccountKey"]);
+
+                    using (var batchClient = BatchClient.Open(credentials))
                     {
-                        queuePos = GetQueuePos(cmd, existingId);
-                        ViewBag.QueuePos = queuePos;
+                        var existingJobName = $"autotune-job-{existingId}";
+                        var existingTask = batchClient.JobOperations.GetTask(existingJobName, "Autotune");
+                        
+                        existingJobStarted = existingTask.ExecutionInformation.StartTime;
                     }
+
+                    if (existingJobStarted == null)
+                        queuePos = GetQueuePos(cmd, existingId);
 
                     ViewBag.JobStarted = existingJobStarted;
                     return View("AlreadyRunning");
