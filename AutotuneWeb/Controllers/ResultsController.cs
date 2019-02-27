@@ -21,8 +21,12 @@ namespace AutotuneWeb.Controllers
 {
     public class ResultsController : Controller
     {
-        public ActionResult JobFinished(int id)
+        public ActionResult JobFinished(int id, string key)
         {
+            // Validate the key
+            if (key != ConfigurationManager.AppSettings["ResultsCallbackKey"])
+                return HttpNotFound();
+
             // Connect to Azure Batch
             var credentials = new BatchSharedKeyCredentials(
                 ConfigurationManager.AppSettings["BatchAccountUrl"],
