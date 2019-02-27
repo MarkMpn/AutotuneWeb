@@ -3,16 +3,24 @@
     ViewBag.Title = "Converted Profile";
 
     var profileJson = Newtonsoft.Json.JsonConvert.SerializeObject(Model, Newtonsoft.Json.Formatting.Indented);
+    var timezone = (string)ViewBag.TimeZone;
+    var units = (string)ViewBag.Units;
+    var mmol = units.ToLower().Contains("mmol");
+    var unitsString = mmol ? "mmol/L" : "md/dL";
+    var isf = Model.IsfProfile.Sensitivities[0].Sensitivity;
+    var cr = Model.CarbRatio;
+    if (mmol)
+    {
+        isf /= 18;
+        cr /= 18;
+    }
 }
 
 <h1>Converted Profile</h1>
 
 <p>
-    Thank you, your Nightscout profile <strong>@ViewBag.ProfileName</strong> has been converted ready to use for Autotune.
-    Copy &amp; paste your converted profile below into <code>profile.json</code>,
-    <code>pumpprofile.json</code> and <code>autotune.json</code> and run Autotune with
-    <code>oref0-autotune --dir=~/myopenaps --ns-host=@ViewBag.NSUrl --start-date=YYYY-MM-DD</code>. Your profile is in the
-    <code>@ViewBag.TimeZone</code> timezone.
+    Thank you, your Nightscout profile has been converted ready to use for Autotune.
+    Please double-check that the details below are correct before running Autotune:
 </p>
 
 @{
@@ -35,26 +43,90 @@
     </div>
 }
 
+<table class="table table-striped">
+    <tr>
+        <th style="width: 10%">Profile Name</th>
+        <td>@ViewBag.ProfileName</td>
+    </tr>
+    <tr>
+        <th>Timezone</th>
+        <td>
+            @if (String.IsNullOrEmpty(timezone))
+            {
+                <i class="fa fa-exclamation"></i> <i>Unknown</i>
+            }
+            else
+            {
+                @timezone
+            }
+        </td>
+    </tr>
+    <tr>
+        <th>Units</th>
+        <td>
+            @if (mmol)
+            {
+                @:mmol/L
+            }
+            else
+            {
+                @:mg/dL
+            }
+        </td>
+    </tr>
+    <tr>
+        <th>ISF</th>
+        <td>@isf.ToString("0.#") @unitsString</td>
+    </tr>
+    <tr>
+        <th>CR</th>
+        <td>@cr.ToString("0.#") @unitsString</td>
+    </tr>
+    <tr>
+        <th>Basal&nbsp;Profile</th>
+        <td>
+            <div class="timeline">
+                @{
+                    var minutesInDay = 24 * 60;
+                    var maxValue = Model.BasalProfile.Max(b => b.Rate);
+                }
+                @for (var i = 0; i < Model.BasalProfile.Length; i++)
+                {
+                    var basal = Model.BasalProfile[i];
+                    var endTime = i < Model.BasalProfile.Length - 1 ? Model.BasalProfile[i + 1].Minutes : minutesInDay;
+                    var duration = endTime - basal.Minutes;
+                    var title = $"{TimeSpan.FromMinutes(basal.Minutes):hh\\:mm} - {TimeSpan.FromMinutes(endTime):hh\\:mm}: {basal.Rate:0.00} U/h";
 
-<div class="timeline">
-    @{
-        var minutesInDay = 24 * 60;
-        var maxValue = Model.BasalProfile.Max(b => b.Rate);
-    }
-    @for (var i = 0; i < Model.BasalProfile.Length; i++)
-    {
-        var basal = Model.BasalProfile[i];
-        var endTime = i < Model.BasalProfile.Length - 1 ? Model.BasalProfile[i + 1].Minutes : minutesInDay;
-        var duration = endTime - basal.Minutes;
+                    <div class="timeline-block" style="width: @(duration * 100f / minutesInDay)%; height: @(basal.Rate * 100 / maxValue)px; margin-top: @(100 - (basal.Rate * 100 / maxValue))px" title="@title">
+                    </div>
+                }
+            </div>
+        </td>
+    </tr>
+</table>
 
-        <div class="timeline-block" style="width: @(duration * 100f / minutesInDay)%; height: @(basal.Rate * 100 / maxValue)px; margin-top: @(100 - (basal.Rate * 100 / maxValue))px">
-        </div>
-    }
-</div>
+<h2>Running Autotune Yourself</h2>
 
-<pre>
+<ol>
+    <li>
+        Copy &amp; paste your converted profile below into <code>profile.json</code>,
+        <code>pumpprofile.json</code> and <code>autotune.json</code>
+        <input type="button" class="btn btn-default btn-sm" value="Show" id="showprofilejson" />
+<pre id="profilejson" style="display: none">
 @profileJson
 </pre>
+    </li>
+    <li>
+        Run Autotune with
+        <code>oref0-autotune --dir=~/myopenaps --ns-host=@ViewBag.NSUrl --start-date=YYYY-MM-DD</code>
+    </li>
+</ol>
+
+<h2>Running Autotune in the Cloud</h2>
+
+<p>
+    Complete the remaining fields below to run Autotune on this profile
+</p>
 
 @using (Html.BeginForm("RunJob", "Home"))
 {
@@ -164,4 +236,13 @@
     <p>
         <input type="submit" class="btn btn-success" value="Run Now" />
     </p>
+}
+
+@section scripts
+{
+    <script>
+        $("#showprofilejson").click(function() {
+            $("#profilejson").toggle();
+        });
+    </script>
 }
