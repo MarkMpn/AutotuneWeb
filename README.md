@@ -12,12 +12,10 @@ To implement this there are several resources required. This has been designed t
 
 1. Website to receive user input and convert Nightscout profile to OpenAPS format
 2. Database to store the details of the profile to run
-3. Scheduled web jobs to automatically start/stop a virtual machine to run Autotune
-4. Linux virtual machine with the following systems installed:
-  1. Autotune
-  2. AutotuneRunner to pick up next profile to run from the database and launch Autotune
-  3. cron job to start AutotuneRunner on a regular basis
-5. [SendGrid](https://sendgrid.com/) account to send the Autotune results by email
+3. Linux VM image with Autotune installed ready to run
+4. Azure Storage account to hold the Autotune input and output files
+5. Azure Batch account to execute the Autotune jobs on a VM instance
+6. [SendGrid](https://sendgrid.com/) account to send the Autotune results by email
 
 ## Database Setup
 
@@ -42,85 +40,68 @@ CREATE TABLE [dbo].[Jobs] (
 )
 ```
 
+## VM image setup
+
+In Azure, create a new Linux VM. Once the VM is provisioned, install Autotune using the standard installation instructions. In my case I followed the instructions
+to install the latest dev version.
+
+Once Autotune is installed on your VM, create an image of that VM. This image will be used later to dynamically create VMs as needed to process Autotune jobs. The
+[instructions for how to create an image from a VM](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/capture-image) can be found on the Azure
+documentation site.
+
+## Azure Storage Accout setup
+
+In Azure, create a new storage account. You should select a general purpose v2 account type. There's no further configuration of the storage account required.
+
+## Azure Batch Account setup
+
+In Azure, create a new batch account. This is going to manage the actual execution of the Autotune jobs. When creating the account, select to use the storage account
+you have just created.
+
+Within the batch account, create a new pool. This is going to manage the individual VMs that Autotune is going to run on. You want this to use the VM image with
+Autotune installed on that you created earlier, so change the Image Type to Custom and select your VM image.
+
+Crucially, you want the pool to automatically scale up and down to handle the Autotune jobs that need to be run. I have set this up to use low-priority VMs to
+reduce costs using the following formula:
+
+```ps
+// Get pending tasks for the past 5 minutes.
+$samples = $ActiveTasks.GetSamplePercent(TimeInterval_Minute * 5);
+
+// If we have fewer than 70 percent data points, we use the last sample point, otherwise we use the maximum of last sample point and the history average.
+$tasks = $samples < 70 ? max(0, $ActiveTasks.GetSample(1)) : 
+max( $ActiveTasks.GetSample(1), avg($ActiveTasks.GetSample(TimeInterval_Minute * 5)));
+
+// If number of pending tasks is not 0, set targetVM to pending tasks, otherwise half of current dedicated.
+$targetVMs = $tasks > 0 ? max(1, $tasks) : max(0, $TargetLowPriorityNodes / 2);
+
+// The pool size is capped at 20, if target VM value is more than that, set it to 20. This value should be adjusted according to your use case.
+cappedPoolSize = 20;
+$TargetLowPriorityNodes = max(0, min($targetVMs, cappedPoolSize));
+
+// Set node deallocation mode - keep nodes active only until tasks finish
+$NodeDeallocationOption = taskcompletion;
+```
+
 ## Website Setup
 
 Create an Azure App Service and deploy the AutotuneWeb project to it.
 
-In the App Service configuration, go to the `Application settings` option and add a connection string with the following details:
+In the App Service configuration, go to the `Application settings` option and add connection strings with the following details:
 
-* Name: `Sql`
-* Value: /Connection string for the database you created earlier/
-* Type: `SQLAzure`
+| Name    | Value                                              | Type     |
+|---------|----------------------------------------------------|----------|
+| Sql     | (Connection string for your Azure SQL Database)    | SQLAzure |
+| Storage | (Connection string for your Azure Storage account) | Custom   |
 
-## Virtual Machine Setup
+Also add the following application settings:
 
-Create a Linux Virtual Machine and install Autotune as described in the Autotune documentation
-
-[Install the .NET Core runtime](https://docs.microsoft.com/en-us/dotnet/core/linux-prerequisites)
-
-Build & deploy the AutotuneRunner project to a new directory, e.g. ~/autotunerunner
-
-Set up a cron job to run AutotuneRunner regularly to check for any new jobs to run:
-
-```
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/home/user/.dotnet/tools
-AUTOTUNE_CONNECTIONSTRING=database-connection-string
-AUTOTUNE_ROOT=/home/user
-SENDGRID_API_KEY=sendgrid-api-key
-SENDGRID_FROM_ADDRESS=email-address
-
-*/1 * * * * cd ~/myopenaps && dotnet ~/autotunerunner/AutotuneRunner.dll
-```
-
-In this crontab file, make the following adjustments:
-
-* **/home/user** - change this to your user directory
-* **database-connection-string** - change this to the connection string for the SQL database you created earlier
-* **sendgrid-api-key** - change this to the API key for your SendGrid account
-* **email-address** - change this to the email address you want the automatically generated emails to be sent from
-
-## Starting/Stopping the Virtual Machine Automatically
-
-As the virtual machine costs for the time it is running, we want it to only run when there is a job in the database
-that is waiting to be processed, and it to shut down as soon as the final job has finished. We can do this with a
-WebJob running within the context of the website App Service.
-
-```ps
-$username = 'service-principal-id'
-$password = ConvertTo-SecureString 'password' -AsPlainText -Force
-$connStr = 'connection-string'
-$resourcegroup = 'resource-group'
-$vmname = 'vm-name'
-$tenantid = 'tenant-id'
-
-$credentials = New-Object System.Management.Automation.PSCredential $username, $password
-$AzureRMAccount = Add-AzureRmAccount -Credential $credentials -ServicePrincipal -TenantId $tenantid
-
-$vmstatus = Get-AzureRMVM -ResourceGroupName $resourcegroup -name $vmname -Status
-
-$con = New-Object System.Data.SqlClient.SqlConnection $connStr
-$con.Open()
-
-$cmd = $con.CreateCommand()
-$cmd.CommandText = 'SELECT count(*) FROM Jobs WHERE ProcessingCompleted IS NULL'
-
-$queueLength = $cmd.ExecuteScalar()
-
-$cmd.Dispose()
-$con.Dispose()
-
-Write-Output "VM status $($vmstatus.Statuses[1].code)"
-Write-Output "Queue length $queueLength"
-
-if ($vmstatus.Statuses[1].code -eq 'PowerState/deallocated' -and $queueLength -gt 0)
-{
-	Write-Output 'VM stopped and jobs in queue - starting'
-	Start-AzureRMVM -ResourceGroupName $resourcegroup -Name $vmname
-}
-
-if ($vmstatus.Statuses[1].code -eq 'PowerState/running' -and $queueLength -eq 0)
-{
-	Write-Output 'VM running and no jobs in queue - stopping'
-	Stop-AzureRMVM -ResourceGroupName $resourcegroup -Name $vmname -Force
-}
-```
+| Name                | Value                                                                          |
+|---------------------|--------------------------------------------------------------------------------|
+| BatchAccountUrl     | The URL of your Azure Batch account                                            |
+| BatchAccountName    | The name of your Azure Batch account                                           |
+| BatchAccountKey     | One of the keys for your Azure Batch account                                   |
+| BatchPoolId         | The name of your Azure Batch pool                                              |
+| SendGridApiKey      | The API Key for your SendGrid account                                          |
+| SendGridFromAddress | The email address to use as the From address on your emails                    |
+| ResultsCallbackKey  | A random value to use to ensure that only your batch jobs can send you results |
