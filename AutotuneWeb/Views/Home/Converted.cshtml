@@ -8,11 +8,9 @@
     var mmol = units.ToLower().Contains("mmol");
     var unitsString = mmol ? "mmol/L" : "md/dL";
     var isf = Model.IsfProfile.Sensitivities[0].Sensitivity;
-    var cr = Model.CarbRatio;
     if (mmol)
     {
         isf /= 18;
-        cr /= 18;
     }
 }
 
@@ -80,7 +78,7 @@
     </tr>
     <tr>
         <th>CR</th>
-        <td>@cr.ToString("0.#") @unitsString</td>
+        <td>@Model.CarbRatio.ToString("0.#") g/U</td>
     </tr>
     <tr>
         <th>Basal&nbsp;Profile</th>
