@@ -1,0 +1,138 @@
+﻿@model AutotuneWeb.Models.AutotuneResults
+@{
+    Layout = null;
+    var startDate = DateTime.Now.AddDays(-Model.Job.Days);
+    var endDate = DateTime.Now.AddDays(-1);
+    var units = Model.Job.Units.ToLower().Contains("mmol") ? "mmol/L" : "mg/dL";
+}
+
+@functions{
+    private string GetBackground(decimal old, decimal updated)
+    {
+        var delta = updated - old;
+        var percentage = delta * 100 / old;
+
+        if (percentage >= 19 ||
+            percentage <= -29)
+            return "background-color: rgb(242, 222, 222);";
+
+        if (percentage >= 10 ||
+            percentage <= -10)
+            return "background-color: rgb(252, 248, 227);";
+
+        return "";
+    }
+
+    private string GetStripedBackground(int hr)
+    {
+        if ((hr % 2) == 0)
+            return "background-color: #f9f9f9";
+
+        return "";
+    }
+
+    private string BasalWarning(int daysTotal, int daysMissed)
+    {
+        var days = new List<string>();
+
+        for (var i = 0; i < daysTotal; i++)
+        {
+            days.Add($"<div style=\"display: inline-block; height: 5px; width: 5px; margin-left: 1px; background-color: {(i < (daysTotal - daysMissed) ? "green" : "red")}\"></div>");
+        }
+
+        return String.Join("", days);
+    }
+}
+
+<html>
+<head>
+    <title>Autotune Results</title>
+</head>
+<body style="font-family: Helvetica Neue,Helvetica,Arial,sans-serif; font-size: 14px; color: rgb(51, 51, 51);">
+    <h1>Autotune Results</h1>
+
+    <h2><a href="@Model.Job.NSUrl">@Model.Job.NSUrl</a></h2>
+    <p>Based on data entered between @(startDate.ToString("yyyy-MM-dd")) and @(endDate.ToString("yyyy-MM-dd"))</p>
+
+    @if (Model.Job.UAMAsBasal)
+    {
+        <p>
+            Unannounced meals were ignored and counted towards basal recommendations. If not all carbs were recorded,
+            re-run with the UAM as Basals option disabled.
+        </p>
+    }
+    else
+    {
+        <p>
+            Sudden rises were counted as being triggered by carbs that were not recorded rather than incorrect basals.
+            If all carbs were recorded, re-run with the UAM as Basals option enabled.
+        </p>
+    }
+
+    <table width='50%'>
+        <thead>
+            <tr>
+                <th style='border-top: solid 1px #ddd; padding: 8px'>Parameter</th>
+                <th style='border-top: solid 1px #ddd; padding: 8px'>Original&nbsp;Value</th>
+                <th style='border-top: solid 1px #ddd; padding: 8px'>Autotune&nbsp;Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style='{GetStripedBackground(0)}'>
+                <th style='border-top: solid 1px #ddd; padding: 8px'>ISF (@units/U)</th>
+                <td style='border-top: solid 1px #ddd; padding: 8px'>@(Model.PumpISF.ToString("0.0"))</td>
+                <td style='border-top: solid 1px #ddd; padding: 8px; @GetBackground(Model.PumpISF, Model.AutotuneISF)'>@(Model.AutotuneISF.ToString("0.0"))</td>
+            </tr>
+            <tr>
+                <th style='border-top: solid 1px #ddd; padding: 8px'>CR (g/U)</th>
+                <td style='border-top: solid 1px #ddd; padding: 8px'>@(Model.PumpCR.ToString("0.0"))</td>
+                <td style='border-top: solid 1px #ddd; padding: 8px; @GetBackground(Model.PumpCR, Model.AutotuneCR)'>@(Model.AutotuneCR.ToString("0.0"))</td>
+            </tr>
+    </table>
+
+    <h2>Basal Suggestions</h2>
+
+    <table width='50%' cellspacing='0'>
+        <thead>
+            <tr>
+                <th width='25%' style='border-top: solid 1px #ddd; padding: 8px'>Time</th>
+                <th width='25%' style='border-top: solid 1px #ddd; padding: 8px'>Original</th>
+                <th width='25%' style='border-top: solid 1px #ddd; padding: 8px'>Autotune Result</th>
+                <th width='25%' style='border-top: solid 1px #ddd; padding: 8px'>Rounded&nbsp;to @Model.Job.PumpBasalIncrement</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var hr in Enumerable.Range(0, 24))
+            {
+                <tr style='@GetStripedBackground(hr)'>
+                    <th style='border-top: solid 1px #ddd; padding: 8px'>@(hr.ToString("00")):00</th>
+                    <td style='border-top: solid 1px #ddd; padding: 8px'>@(Model.PumpBasals[hr].ToString("0.000"))</td>
+                    <td style='border-top: solid 1px #ddd; padding: 8px'>@(Model.AutotuneBasals[hr].ToString("0.000"))</td>
+                    <td style='border-top: solid 1px #ddd; padding: 8px; @GetBackground(Model.PumpBasals[hr], Model.SuggestedBasals[hr])'>@(Model.SuggestedBasals[hr].ToString("0.000")) @Html.Partial("BasalDaysMissed", new Tuple<int, int>(Model.Job.Days, Model.DaysMissed[hr]))</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <th style='border-top: solid 1px #ddd; padding: 8px'>Daily Total</th>
+                <th style='border-top: solid 1px #ddd; padding: 8px'>@(Model.PumpBasals.Sum().ToString("0.000"))</th>
+                <th style='border-top: solid 1px #ddd; padding: 8px'>@(Model.AutotuneBasals.Sum().ToString("0.000"))</th>
+                <th style='border-top: solid 1px #ddd; padding: 8px'>@(Model.SuggestedBasals.Sum().ToString("0.000"))</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <h2>Notes</h2>
+    <p>
+        Suggestions higlighted in yellow indicate a suggested change of at least 10%, and red indicates a change of +20% or
+        -30% (the standard limits imposed by Autotune). Please always take care when adopting any changes suggested by
+        Autotune, but especially for these larger highlighted changes.
+    </p>
+    <p>
+        The green &amp; red blocks next to each basal suggestion indicate how many days the Autotune algorithm used
+        actual BG data to produce the suggestion (green) and how many days it averaged the surrounding hours due to
+        the data for that hour being dominated by other factors such as carb absorption. This is currently an experimental
+        new feature to try to give an indication of how much trust to place in each suggestion.
+    </p>
+</body>
+</html>
