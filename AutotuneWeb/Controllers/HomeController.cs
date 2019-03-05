@@ -310,6 +310,17 @@ namespace AutotuneWeb.Controllers
                     filePattern: "autotune/autotune.*.log",
                     destination: new OutputFileDestination(new OutputFileBlobContainerDestination(containerUrl)),
                     uploadOptions: new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)));
+
+                // Ensure the task still completes even if Autotune fails, as we still want to email the
+                // log file with the error details
+                task.ExitConditions = new ExitConditions
+                {
+                    ExitCodes = new List<ExitCodeMapping>(new[] 
+                    {
+                        new ExitCodeMapping(1, new ExitOptions { DependencyAction = DependencyAction.Satisfy })
+                    })
+                };
+
                 batchClient.JobOperations.AddTask(jobName, task);
 
                 // Get the URL for the JobFinished action that the recommendations can be uploaded to to generate the email
