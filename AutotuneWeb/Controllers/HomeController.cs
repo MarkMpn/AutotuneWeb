@@ -321,7 +321,7 @@ namespace AutotuneWeb.Controllers
                 var uploadUrl = new Uri(Request.Url, Url.Action("JobFinished", "Results", new { id, key = ConfigurationManager.AppSettings["ResultsCallbackKey"] }));
                 var uploadCommandLine = $"/bin/sh -c '" +
                     "cd /usr/src/oref0 && " +
-                    $"wget {uploadUrl}&commit=$(git rev-parse --short HEAD)" +
+                    $"wget -O /dev/null -o /dev/null {uploadUrl}\\&commit=$(git rev-parse --short HEAD)" +
                     "'";
                 var uploadTask = new CloudTask("Upload", uploadCommandLine);
                 uploadTask.DependsOn = TaskDependencies.OnId(task.Id);
