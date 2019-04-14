@@ -34,12 +34,6 @@ namespace AutotuneWeb.Controllers
                 return View("Index");
             }
 
-            if (nsUrl.Scheme != "https")
-            {
-                ModelState.AddModelError(nameof(nsUrl), "Please use https for your Nightscout URL");
-                return View("Index");
-            }
-
             Response.Cookies.Add(new HttpCookie("nsUrl", nsUrl.ToString()));
             ViewBag.NSUrl = nsUrl;
             NSProfileDetails nsProfile;
