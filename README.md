@@ -1,5 +1,7 @@
 # AutotuneWeb
 
+[Visit the AutotuneWeb Website](https://autotuneweb.azurewebsites.net){: .btn .btn-primary}
+
 This project aims to simplify the process of running [Autotune](https://openaps.readthedocs.io/en/latest/docs/Customize-Iterate/autotune.html)
 for non-OpenAPS users, e.g. people running [AndroidAPS](http://androidaps.readthedocs.io/en/latest/EN/index.html).
 
@@ -19,7 +21,7 @@ To implement this there are several resources required. This has been designed t
 
 ## Database Setup
 
-Create an Azure SQL Database and create a table `Jobs` as follows:
+Create an Azure SQL Database and create tables `Jobs` and `Settings` as follows:
 
 ```sql
 CREATE TABLE [dbo].[Jobs] (
@@ -37,6 +39,11 @@ CREATE TABLE [dbo].[Jobs] (
 	[Failed] [bit] NULL,
 	[TimeZone] [varchar](100) NULL,
 	[DaysDuration] [int] NOT NULL
+)
+
+CREATE TABLE [dbo].[Settings] (
+	[Name] [varchar](100) NOT NULL PRIMARY KEY,
+	[Value] [varchar](100) NOT NULL
 )
 ```
 
@@ -64,7 +71,7 @@ Autotune installed on that you created earlier, so change the Image Type to Cust
 Crucially, you want the pool to automatically scale up and down to handle the Autotune jobs that need to be run. I have set this up to use low-priority VMs to
 reduce costs using the following formula:
 
-```ps
+```
 // Get pending tasks for the past 5 minutes.
 $samples = $ActiveTasks.GetSamplePercent(TimeInterval_Minute * 5);
 
