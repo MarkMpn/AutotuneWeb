@@ -321,7 +321,7 @@ namespace AutotuneWeb.Controllers
                 var uploadUrl = new Uri(Request.Url, Url.Action("JobFinished", "Results", new { id, key = ConfigurationManager.AppSettings["ResultsCallbackKey"] }));
                 var uploadCommandLine = $"/bin/sh -c '" +
                     "cd /usr/src/oref0 && " +
-                    $"wget {uploadUrl}&commit=$(git rev-parse HEAD)" +
+                    $"wget {uploadUrl}&commit=$(git rev-parse --short HEAD)" +
                     "'";
                 var uploadTask = new CloudTask("Upload", uploadCommandLine);
                 uploadTask.DependsOn = TaskDependencies.OnId(task.Id);
@@ -332,6 +332,18 @@ namespace AutotuneWeb.Controllers
 
         public ActionResult About()
         {
+            // Get the details of the Autotune commit used for the latest job
+            using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["Sql"].ConnectionString))
+            using (var cmd = con.CreateCommand())
+            {
+                con.Open();
+
+                cmd.CommandText = "SELECT Value FROM Settings WHERE Name = 'Commit'";
+                var commit = (string)cmd.ExecuteScalar();
+
+                ViewBag.Commit = commit;
+            }
+
             return View();
         }
 

@@ -27,6 +27,8 @@ namespace AutotuneWeb.Controllers
             if (key != ConfigurationManager.AppSettings["ResultsCallbackKey"])
                 return HttpNotFound();
 
+            ViewBag.Commit = commit;
+
             // Connect to Azure Batch
             var credentials = new BatchSharedKeyCredentials(
                 ConfigurationManager.AppSettings["BatchAccountUrl"],
