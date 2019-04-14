@@ -1,6 +1,6 @@
 # AutotuneWeb
 
-<a href="https://autotuneweb.azurewebsites.net" class="btn btn-primary">Run AutotuneWeb Now</a>
+**[Run AutotuneWeb Now](https://autotuneweb.azurewebsites.net)**
 
 This project aims to simplify the process of running [Autotune](https://openaps.readthedocs.io/en/latest/docs/Customize-Iterate/autotune.html)
 for non-OpenAPS users, e.g. people running [AndroidAPS](http://androidaps.readthedocs.io/en/latest/EN/index.html).
