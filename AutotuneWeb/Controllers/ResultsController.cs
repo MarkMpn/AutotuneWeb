@@ -21,7 +21,7 @@ namespace AutotuneWeb.Controllers
 {
     public class ResultsController : Controller
     {
-        public ActionResult JobFinished(int id, string key)
+        public ActionResult JobFinished(int id, string key, string commit)
         {
             // Validate the key
             if (key != ConfigurationManager.AppSettings["ResultsCallbackKey"])
@@ -114,6 +114,14 @@ namespace AutotuneWeb.Controllers
                     cmd.Parameters.AddWithValue("@ProcessingCompleted", (object)endTime ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Result", result);
                     cmd.Parameters.AddWithValue("@Failed", !success);
+                    cmd.ExecuteNonQuery();
+                }
+
+                // Store the commit hash to identify the version of Autotune that was used
+                using (var cmd = con.CreateCommand())
+                {
+                    cmd.CommandText = "UPDATE Settings SET Value = @commit WHERE Name = 'Commit'";
+                    cmd.Parameters.AddWithValue("@Commit", commit);
                     cmd.ExecuteNonQuery();
                 }
             }
