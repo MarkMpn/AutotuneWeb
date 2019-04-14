@@ -322,6 +322,7 @@ namespace AutotuneWeb.Controllers
                 var uploadCommandLine = $"wget {uploadUrl}";
                 var uploadTask = new CloudTask("Upload", uploadCommandLine);
                 uploadTask.DependsOn = TaskDependencies.OnId(task.Id);
+                uploadTask.Constraints = new TaskConstraints(maxTaskRetryCount: 2);
                 batchClient.JobOperations.AddTask(jobName, uploadTask);
             }
         }
