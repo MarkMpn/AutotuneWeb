@@ -42,7 +42,7 @@ namespace AutotuneWeb.Models
         
         public string Units { get; set; }
 
-        public static NSProfileDetails LoadFromNightscout(Uri url)
+        public static NSProfileDetails LoadFromNightscout(ref Uri url)
         {
             NSProfileDetails profile = null;
 
@@ -54,6 +54,10 @@ namespace AutotuneWeb.Models
             using (var stream = resp.GetResponseStream())
             using (var reader = new StreamReader(stream))
             {
+                // Change the URL based on any redirects we've followed and remove any trailing path elements that might have
+                // been included in the input.
+                url = new Uri(resp.ResponseUri, "/");
+
                 var json = reader.ReadToEnd();
                 var profileSwitches = JsonConvert.DeserializeObject<NSProfileSwitch[]>(json);
 

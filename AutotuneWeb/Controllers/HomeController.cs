@@ -35,18 +35,19 @@ namespace AutotuneWeb.Controllers
             }
 
             Response.Cookies.Add(new HttpCookie("nsUrl", nsUrl.ToString()));
-            ViewBag.NSUrl = nsUrl;
             NSProfileDetails nsProfile;
 
             try
             {
-                nsProfile = NSProfileDetails.LoadFromNightscout(nsUrl);
+                nsProfile = NSProfileDetails.LoadFromNightscout(ref nsUrl);
             }
             catch (Exception ex)
             {
                 ModelState.AddModelError(nameof(nsUrl), ex.Message);
-                return View("Index");
+                return View("Index", (object) nsUrl.ToString());
             }
+
+            ViewBag.NSUrl = nsUrl;
 
             nsProfile.CarbRatio = CombineAdjacentTimeBlocks(nsProfile.CarbRatio);
             nsProfile.Sensitivity = CombineAdjacentTimeBlocks(nsProfile.Sensitivity);
