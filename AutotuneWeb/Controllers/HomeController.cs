@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -47,6 +48,7 @@ namespace AutotuneWeb.Controllers
                 return View("Index", (object) nsUrl.ToString());
             }
 
+            ModelState.SetModelValue(nameof(nsUrl), new ValueProviderResult(nsUrl, nsUrl.ToString(), CultureInfo.InvariantCulture));
             ViewBag.NSUrl = nsUrl;
 
             nsProfile.CarbRatio = CombineAdjacentTimeBlocks(nsProfile.CarbRatio);
