@@ -108,7 +108,7 @@
                     <th style='border-top: solid 1px #ddd; padding: 8px'>@(hr.ToString("00")):00</th>
                     <td style='border-top: solid 1px #ddd; padding: 8px'>@(Model.PumpBasals[hr].ToString("0.000"))</td>
                     <td style='border-top: solid 1px #ddd; padding: 8px'>@(Model.AutotuneBasals[hr].ToString("0.000"))</td>
-                    <td style='border-top: solid 1px #ddd; padding: 8px; @GetBackground(Model.PumpBasals[hr], Model.SuggestedBasals[hr])'>@(Model.SuggestedBasals[hr].ToString("0.000")) @Html.Partial("BasalDaysMissed", new Tuple<int, int>(Model.Job.Days, Model.DaysMissed[hr]))</td>
+                    <td style='border-top: solid 1px #ddd; padding: 8px; @GetBackground(Model.PumpBasals[hr], Model.SuggestedBasals[hr])'>@(Model.SuggestedBasals[hr].ToString("0.000")) <partial name="BasalDaysMissed" model="new Tuple<int, int>(Model.Job.Days, Model.DaysMissed[hr])" /></td>
                 </tr>
             }
         </tbody>
