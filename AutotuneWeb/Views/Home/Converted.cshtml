@@ -1,4 +1,5 @@
 ﻿@model AutotuneWeb.Models.OapsProfile
+@using System.Globalization
 @{
     ViewBag.Title = "Converted Profile";
 
@@ -95,7 +96,7 @@
                     var duration = endTime - basal.Minutes;
                     var title = $"{TimeSpan.FromMinutes(basal.Minutes):hh\\:mm} - {TimeSpan.FromMinutes(endTime):hh\\:mm}: {basal.Rate:0.00} U/h";
 
-                    <div class="timeline-block" style="width: @(duration * 100f / minutesInDay)%; height: @(basal.Rate * 100 / maxValue)px; margin-top: @(100 - (basal.Rate * 100 / maxValue))px" title="@title">
+                    <div class="timeline-block" style="width: @((duration * 100f / minutesInDay).ToString(CultureInfo.InvariantCulture))%; height: @((basal.Rate * 100 / maxValue).ToString(CultureInfo.InvariantCulture))px; margin-top: @((100 - (basal.Rate * 100 / maxValue)).ToString(CultureInfo.InvariantCulture))px" title="@title">
                     </div>
                 }
             </div>
