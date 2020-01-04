@@ -1,20 +1,18 @@
 ﻿using AutotuneWeb.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
 using Microsoft.Azure.Batch.Common;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Data.SqlClient;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Web;
-using System.Web.Mvc;
 
 namespace AutotuneWeb.Controllers
 {
@@ -22,7 +20,7 @@ namespace AutotuneWeb.Controllers
     {
         public ActionResult Index()
         {
-            var url = Request.Cookies["nsUrl"]?.Value;
+            var url = Request.Cookies["nsUrl"];
             return View((object)url);
         }
 
@@ -35,7 +33,7 @@ namespace AutotuneWeb.Controllers
                 return View("Index");
             }
 
-            Response.Cookies.Add(new HttpCookie("nsUrl", nsUrl.ToString()));
+            Response.Cookies.Append("nsUrl", nsUrl.ToString());
             NSProfileDetails nsProfile;
 
             try
@@ -45,10 +43,10 @@ namespace AutotuneWeb.Controllers
             catch (Exception ex)
             {
                 ModelState.AddModelError(nameof(nsUrl), ex.Message);
-                return View("Index", (object) nsUrl.ToString());
+                return View("Index", nsUrl.ToString());
             }
 
-            ModelState.SetModelValue(nameof(nsUrl), new ValueProviderResult(nsUrl, nsUrl.ToString(), CultureInfo.InvariantCulture));
+            ModelState.SetModelValue(nameof(nsUrl), nsUrl, nsUrl.ToString());
             ViewBag.NSUrl = nsUrl;
 
             nsProfile.CarbRatio = CombineAdjacentTimeBlocks(nsProfile.CarbRatio);
@@ -82,7 +80,7 @@ namespace AutotuneWeb.Controllers
 
             ViewBag.Warnings = warnings;
             ViewBag.TimeZone = nsProfile.TimeZone;
-            ViewBag.Email = Request.Cookies["email"]?.Value;
+            ViewBag.Email = Request.Cookies["email"];
             return View("Converted", oapsProfile);
         }
 
@@ -139,7 +137,7 @@ namespace AutotuneWeb.Controllers
 
             // Save the details of this job in the database
             int queuePos;
-            using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["Sql"].ConnectionString))
+            using (var con = new SqlConnection(Startup.Configuration.GetConnectionString("Sql")))
             using (var cmd = con.CreateCommand())
             {
                 con.Open();
@@ -167,9 +165,9 @@ namespace AutotuneWeb.Controllers
                 {
                     // Get the job details from Azure Batch
                     var credentials = new BatchSharedKeyCredentials(
-                        ConfigurationManager.AppSettings["BatchAccountUrl"],
-                        ConfigurationManager.AppSettings["BatchAccountName"],
-                        ConfigurationManager.AppSettings["BatchAccountKey"]);
+                        Startup.Configuration["BatchAccountUrl"],
+                        Startup.Configuration["BatchAccountName"],
+                        Startup.Configuration["BatchAccountKey"]);
 
                     using (var batchClient = BatchClient.Open(credentials))
                     {
@@ -203,7 +201,7 @@ namespace AutotuneWeb.Controllers
                 CreateBatchJob(jobName, id, profileUrl, containerUrl, nsUrl.ToString(), days, timezone, uamAsBasal.GetValueOrDefault());
             }
 
-            Response.Cookies.Add(new HttpCookie("email", emailResultsTo));
+            Response.Cookies.Append("email", emailResultsTo);
 
             return View(queuePos);
         }
@@ -219,7 +217,7 @@ namespace AutotuneWeb.Controllers
         private string SaveProfileToStorage(string jobName, string profile, out string containerUrl)
         {
             // Connect to Azure Storage
-            var connectionString = ConfigurationManager.ConnectionStrings["Storage"].ConnectionString;
+            var connectionString = Startup.Configuration.GetConnectionString("Storage");
             var storageAccount = CloudStorageAccount.Parse(connectionString);
             var cloudBlobClient = storageAccount.CreateCloudBlobClient();
 
@@ -263,13 +261,13 @@ namespace AutotuneWeb.Controllers
         {
             // Connect to Azure Batch
             var credentials = new BatchSharedKeyCredentials(
-                ConfigurationManager.AppSettings["BatchAccountUrl"],
-                ConfigurationManager.AppSettings["BatchAccountName"],
-                ConfigurationManager.AppSettings["BatchAccountKey"]);
+                Startup.Configuration["BatchAccountUrl"],
+                Startup.Configuration["BatchAccountName"],
+                Startup.Configuration["BatchAccountKey"]);
 
             using (var batchClient = BatchClient.Open(credentials))
             {
-                var poolId = ConfigurationManager.AppSettings["BatchPoolId"];
+                var poolId = Startup.Configuration["BatchPoolId"];
 
                 // Create the job
                 var job = batchClient.JobOperations.CreateJob();
@@ -321,7 +319,7 @@ namespace AutotuneWeb.Controllers
                 batchClient.JobOperations.AddTask(jobName, task);
 
                 // Get the URL for the JobFinished action that the recommendations can be uploaded to to generate the email
-                var uploadUrl = new Uri(Request.Url, Url.Action("JobFinished", "Results", new { id, key = ConfigurationManager.AppSettings["ResultsCallbackKey"] }));
+                var uploadUrl = Url.Action("JobFinished", "Results", new { id, key = Startup.Configuration["ResultsCallbackKey"] }, Request.Scheme);
                 var uploadCommandLine = $"/bin/sh -c '" +
                     "cd /usr/src/oref0 && " +
                     $"wget -O /dev/null -o /dev/null {uploadUrl}\\&commit=$(git rev-parse --short HEAD)" +
@@ -336,7 +334,7 @@ namespace AutotuneWeb.Controllers
         public ActionResult About()
         {
             // Get the details of the Autotune commit used for the latest job
-            using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["Sql"].ConnectionString))
+            using (var con = new SqlConnection(Startup.Configuration.GetConnectionString("Sql")))
             using (var cmd = con.CreateCommand())
             {
                 con.Open();
@@ -360,9 +358,15 @@ namespace AutotuneWeb.Controllers
             return View();
         }
 
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public ActionResult Error()
+        {
+            return View();
+        }
+
         public ActionResult Delete(string url, string email)
         {
-            using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["Sql"].ConnectionString))
+            using (var con = new SqlConnection(Startup.Configuration.GetConnectionString("Sql")))
             using (var cmd = con.CreateCommand())
             {
                 con.Open();
