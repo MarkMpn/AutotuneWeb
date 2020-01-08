@@ -30,8 +30,6 @@ namespace AutotuneWeb.Controllers
             if (key != Startup.Configuration["ResultsCallbackKey"])
                 return NotFound();
 
-            ViewBag.Commit = commit;
-
             // Connect to Azure Batch
             var credentials = new BatchSharedKeyCredentials(
                 Startup.Configuration["BatchAccountUrl"],
@@ -88,6 +86,7 @@ namespace AutotuneWeb.Controllers
 
                             // Parse the results
                             var parsedResults = AutotuneResults.ParseResult(result, job);
+                            parsedResults.Commit = commit;
 
                             emailBody = await _viewRenderService.RenderToStringAsync("Results/Success", parsedResults);
                         }
@@ -106,7 +105,9 @@ namespace AutotuneWeb.Controllers
                 }
 
                 if (emailBody == null)
-                    emailBody = await _viewRenderService.RenderToStringAsync("Results/Failure", null);
+                {
+                    emailBody = await _viewRenderService.RenderToStringAsync("Results/Failure", commit);
+                }
 
                 EmailResults(job.EmailResultsTo, emailBody, attachments);
 

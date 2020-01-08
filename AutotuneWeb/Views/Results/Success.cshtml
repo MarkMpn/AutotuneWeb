@@ -108,7 +108,7 @@
                     <th style='border-top: solid 1px #ddd; padding: 8px'>@(hr.ToString("00")):00</th>
                     <td style='border-top: solid 1px #ddd; padding: 8px'>@(Model.PumpBasals[hr].ToString("0.000"))</td>
                     <td style='border-top: solid 1px #ddd; padding: 8px'>@(Model.AutotuneBasals[hr].ToString("0.000"))</td>
-                    <td style='border-top: solid 1px #ddd; padding: 8px; @GetBackground(Model.PumpBasals[hr], Model.SuggestedBasals[hr])'>@(Model.SuggestedBasals[hr].ToString("0.000")) <partial name="BasalDaysMissed" model="new Tuple<int, int>(Model.Job.Days, Model.DaysMissed[hr])" /></td>
+                    <td style='border-top: solid 1px #ddd; padding: 8px; @GetBackground(Model.PumpBasals[hr], Model.SuggestedBasals[hr])'>@(Model.SuggestedBasals[hr].ToString("0.000")) <partial name="Results/BasalDaysMissed" model="new Tuple<int, int>(Model.Job.Days, Model.DaysMissed[hr])" /></td>
                 </tr>
             }
         </tbody>
@@ -135,7 +135,7 @@
         new feature to try to give an indication of how much trust to place in each suggestion.
     </p>
     <p>
-        This job was run with Autotune version <a href="https://github.com/openaps/oref0/tree/@ViewBag.Commit">@ViewBag.Commit</a>
+        This job was run with Autotune version <a href="https://github.com/openaps/oref0/tree/@Model.Commit">@Model.Commit</a>
     </p>
 </body>
 </html>
