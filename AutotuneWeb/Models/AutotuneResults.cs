@@ -20,6 +20,7 @@ namespace AutotuneWeb.Models
         public decimal[] AutotuneBasals { get; set; }
         public decimal[] SuggestedBasals { get; set; }
         public int[] DaysMissed { get; set; }
+        public string Commit { get; set; }
 
         public static AutotuneResults ParseResult(string result, Job job)
         {
