@@ -1,49 +1,50 @@
 ﻿using AutotuneWeb.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Newtonsoft.Json;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Web;
-using System.Web.Mvc;
+using System.Threading.Tasks;
 
 namespace AutotuneWeb.Controllers
 {
     public class ResultsController : Controller
     {
-        public ActionResult JobFinished(int id, string key, string commit)
+        private readonly ViewRenderService _viewRenderService;
+
+        public ResultsController(ViewRenderService viewRenderService)
+        {
+            _viewRenderService = viewRenderService;
+        }
+
+        public async Task<ActionResult> JobFinishedAsync(int id, string key, string commit)
         {
             // Validate the key
-            if (key != ConfigurationManager.AppSettings["ResultsCallbackKey"])
-                return HttpNotFound();
-
-            ViewBag.Commit = commit;
+            if (key != Startup.Configuration["ResultsCallbackKey"])
+                return NotFound();
 
             // Connect to Azure Batch
             var credentials = new BatchSharedKeyCredentials(
-                ConfigurationManager.AppSettings["BatchAccountUrl"],
-                ConfigurationManager.AppSettings["BatchAccountName"],
-                ConfigurationManager.AppSettings["BatchAccountKey"]);
+                Startup.Configuration["BatchAccountUrl"],
+                Startup.Configuration["BatchAccountName"],
+                Startup.Configuration["BatchAccountKey"]);
 
             using (var batchClient = BatchClient.Open(credentials))
-            using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["Sql"].ConnectionString))
+            using (var con = new SqlConnection(Startup.Configuration.GetConnectionString("Sql")))
             {
                 con.Open();
 
                 // Load the job details from the database
                 var job = Job.Load(con, id);
                 if (job == null)
-                    return HttpNotFound();
+                    return NotFound();
 
                 var result = "";
                 var success = false;
@@ -63,7 +64,7 @@ namespace AutotuneWeb.Controllers
                     endTime = autotune.ExecutionInformation.EndTime;
                     
                     // Connect to Azure Storage
-                    var connectionString = ConfigurationManager.ConnectionStrings["Storage"].ConnectionString;
+                    var connectionString = Startup.Configuration.GetConnectionString("Storage");
                     var storageAccount = CloudStorageAccount.Parse(connectionString);
                     var cloudBlobClient = storageAccount.CreateCloudBlobClient();
 
@@ -85,8 +86,9 @@ namespace AutotuneWeb.Controllers
 
                             // Parse the results
                             var parsedResults = AutotuneResults.ParseResult(result, job);
+                            parsedResults.Commit = commit;
 
-                            emailBody = RenderViewToString(ControllerContext, "Success", parsedResults);
+                            emailBody = await _viewRenderService.RenderToStringAsync("Results/Success", parsedResults);
                         }
                     }
 
@@ -103,7 +105,9 @@ namespace AutotuneWeb.Controllers
                 }
 
                 if (emailBody == null)
-                    emailBody = RenderViewToString(ControllerContext, "Failure");
+                {
+                    emailBody = await _viewRenderService.RenderToStringAsync("Results/Failure", commit);
+                }
 
                 EmailResults(job.EmailResultsTo, emailBody, attachments);
 
@@ -133,9 +137,9 @@ namespace AutotuneWeb.Controllers
 
         private void EmailResults(string emailAddress, string emailBody, CloudBlob[] attachments)
         {
-            var apiKey = ConfigurationManager.AppSettings["SendGridApiKey"];
+            var apiKey = Startup.Configuration["SendGridApiKey"];
             var client = new SendGridClient(apiKey);
-            var from = new EmailAddress(ConfigurationManager.AppSettings["SendGridFromAddress"], "Autotune");
+            var from = new EmailAddress(Startup.Configuration["SendGridFromAddress"], "Autotune");
             var subject = "Autotune Results";
             var to = new EmailAddress(emailAddress);
             var msg = MailHelper.CreateSingleEmail(from, to, subject, "", emailBody);
@@ -150,40 +154,6 @@ namespace AutotuneWeb.Controllers
             }
             
             client.SendEmailAsync(msg).Wait();
-        }
-
-        static string RenderViewToString(ControllerContext context,
-                                    string viewPath,
-                                    object model = null,
-                                    bool partial = false)
-        {
-            // first find the ViewEngine for this view
-            ViewEngineResult viewEngineResult = null;
-            if (partial)
-                viewEngineResult = ViewEngines.Engines.FindPartialView(context, viewPath);
-            else
-                viewEngineResult = ViewEngines.Engines.FindView(context, viewPath, null);
-
-            if (viewEngineResult == null)
-                throw new FileNotFoundException("View cannot be found.");
-
-            // get the view and attach the model to view data
-            var view = viewEngineResult.View;
-            context.Controller.ViewData.Model = model;
-
-            string result = null;
-
-            using (var sw = new StringWriter())
-            {
-                var ctx = new ViewContext(context, view,
-                                            context.Controller.ViewData,
-                                            context.Controller.TempData,
-                                            sw);
-                view.Render(ctx, sw);
-                result = sw.ToString();
-            }
-
-            return result;
         }
     }
 }
