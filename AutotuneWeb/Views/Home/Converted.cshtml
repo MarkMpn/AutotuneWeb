@@ -3,6 +3,26 @@
 @{
     ViewBag.Title = "Converted Profile";
 
+    var profileActivation = (DateTime)ViewBag.ProfileActivation;
+    long ticks = 0;
+    int days;
+    if (profileActivation > DateTime.MinValue)
+    {
+        var activation = profileActivation.Date;
+        if (profileActivation.Hour > 12)
+        {
+            activation = activation.AddDays(1);
+        }
+        var today = DateTime.UtcNow.Date;
+        var activeSince = today - activation;
+        days = Math.Min((int)activeSince.TotalDays, 7);
+        ticks = new DateTimeOffset(profileActivation).ToUnixTimeMilliseconds();
+    }
+    else
+    {
+        days = 7;
+    }
+
     var profileJson = Newtonsoft.Json.JsonConvert.SerializeObject(Model, Newtonsoft.Json.Formatting.Indented);
     var timezone = (string)ViewBag.TimeZone;
     var units = (string)ViewBag.Units;
@@ -44,8 +64,23 @@
 
 <table class="table table-striped">
     <tr>
-        <th style="width: 10%">Profile Name</th>
+        <th style="width: 12%">Profile Name</th>
         <td>@ViewBag.ProfileName</td>
+    </tr>
+    <tr>
+        <th>Profile Activation</th>
+        <td>
+            @if (profileActivation == DateTime.MinValue)
+            {
+                <i class="fa fa-exclamation"></i> <i>Unknown</i>
+            }
+            else
+            {
+                <script>
+                    document.writeln(new Date(@ticks).toLocaleString());
+                </script>
+            }
+        </td>
     </tr>
     <tr>
         <th>Timezone</th>
@@ -205,7 +240,7 @@
         <div class="col-md-4">
             <label for="days">Days of Data</label>
             <div class="input-group">
-                <input type="number" name="days" min="1" max="30" value="7" class="form-control" required />
+                <input type="number" name="days" min="1" max="30" value="@days" class="form-control" required />
                 <span class="input-group-addon">days</span>
             </div>
         </div>
