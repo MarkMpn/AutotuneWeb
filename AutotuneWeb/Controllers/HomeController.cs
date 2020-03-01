@@ -35,10 +35,11 @@ namespace AutotuneWeb.Controllers
 
             Response.Cookies.Append("nsUrl", nsUrl.ToString());
             NSProfileDetails nsProfile;
+            DateTime profileActivation;
 
             try
             {
-                nsProfile = NSProfileDetails.LoadFromNightscout(ref nsUrl);
+                nsProfile = NSProfileDetails.LoadFromNightscout(ref nsUrl, out profileActivation);
             }
             catch (Exception ex)
             {
@@ -48,6 +49,7 @@ namespace AutotuneWeb.Controllers
 
             ModelState.SetModelValue(nameof(nsUrl), nsUrl, nsUrl.ToString());
             ViewBag.NSUrl = nsUrl;
+            ViewBag.ProfileActivation = profileActivation;
 
             nsProfile.CarbRatio = CombineAdjacentTimeBlocks(nsProfile.CarbRatio);
             nsProfile.Sensitivity = CombineAdjacentTimeBlocks(nsProfile.Sensitivity);
