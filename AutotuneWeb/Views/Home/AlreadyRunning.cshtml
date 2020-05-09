@@ -1,4 +1,4 @@
-﻿@{ 
+﻿@{
     if (ViewBag.JobStarted == null)
     {
         ViewBag.Title = "Already Queued";
@@ -12,7 +12,16 @@
 
 @if (ViewBag.JobStarted == null)
 {
-    <p>Your job is already in the queue, and is currently in position <span style="font-size: 2em">@ViewBag.QueuePos</span>.</p>
+    var queuePos = (int)ViewBag.QueuePos;
+
+    if (queuePos <= 1)
+    {
+        <p>Your job is the only one in the queue, it should start processing very soon.</p>
+    }
+    else
+    {
+        <p>There are now <span style="font-size: 2em">@Model</span> jobs waiting to be processed (including yours).</p>
+    }
 }
 else
 {

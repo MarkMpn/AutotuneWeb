@@ -177,13 +177,11 @@ namespace AutotuneWeb.Controllers
                         var existingTask = batchClient.JobOperations.GetTask(existingJobName, "Autotune");
                         
                         existingJobStarted = existingTask.ExecutionInformation.StartTime;
+                        queuePos = batchClient.JobOperations.ListJobs(new ODATADetailLevel(filterClause: "state eq 'active'", selectClause: "id")).Count();
                     }
 
                     if (existingJobStarted == null)
-                    {
-                        queuePos = GetQueuePos(cmd, existingId);
                         ViewBag.QueuePos = queuePos;
-                    }
 
                     ViewBag.JobStarted = existingJobStarted;
                     return View("AlreadyRunning");
@@ -195,25 +193,15 @@ namespace AutotuneWeb.Controllers
                 cmd.CommandText = "SELECT @@IDENTITY";
                 var id = Convert.ToInt32(cmd.ExecuteScalar());
                 
-                queuePos = GetQueuePos(cmd, id);
-
                 var jobName = $"autotune-job-{id}";
                 string containerUrl;
                 var profileUrl = SaveProfileToStorage(jobName, oapsProfile, out containerUrl);
-                CreateBatchJob(jobName, id, profileUrl, containerUrl, nsUrl.ToString(), days, timezone, uamAsBasal.GetValueOrDefault());
+                queuePos = CreateBatchJob(jobName, id, profileUrl, containerUrl, nsUrl.ToString(), days, timezone, uamAsBasal.GetValueOrDefault());
             }
 
             Response.Cookies.Add(new HttpCookie("email", emailResultsTo));
 
             return View(queuePos);
-        }
-
-        private int GetQueuePos(SqlCommand cmd, int jobId)
-        {
-            cmd.CommandText = "SELECT count(*) FROM Jobs WHERE ProcessingStarted IS NULL AND JobID <= @JobID";
-            cmd.Parameters.AddWithValue("@JobID", jobId);
-
-            return (int)cmd.ExecuteScalar();
         }
 
         private string SaveProfileToStorage(string jobName, string profile, out string containerUrl)
@@ -259,7 +247,7 @@ namespace AutotuneWeb.Controllers
             return blob.Uri + sasBlobToken;
         }
 
-        private void CreateBatchJob(string jobName, int id, string profileUrl, string containerUrl, string nsUrl, int daysDuration, string timeZone, bool uamAsBasal)
+        private int CreateBatchJob(string jobName, int id, string profileUrl, string containerUrl, string nsUrl, int daysDuration, string timeZone, bool uamAsBasal)
         {
             // Connect to Azure Batch
             var credentials = new BatchSharedKeyCredentials(
@@ -330,6 +318,9 @@ namespace AutotuneWeb.Controllers
                 uploadTask.DependsOn = TaskDependencies.OnId(task.Id);
                 uploadTask.Constraints = new TaskConstraints(maxTaskRetryCount: 2);
                 batchClient.JobOperations.AddTask(jobName, uploadTask);
+
+                var queuePos = batchClient.JobOperations.ListJobs(new ODATADetailLevel(filterClause: "state eq 'active'", selectClause: "id")).Count();
+                return queuePos;
             }
         }
 
