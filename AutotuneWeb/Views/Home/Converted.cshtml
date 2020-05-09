@@ -1,6 +1,27 @@
 ﻿@model AutotuneWeb.Models.OapsProfile
+@using System.Globalization
 @{
     ViewBag.Title = "Converted Profile";
+
+    var profileActivation = (DateTime)ViewBag.ProfileActivation;
+    long ticks = 0;
+    int days;
+    if (profileActivation > DateTime.MinValue)
+    {
+        var activation = profileActivation.Date;
+        if (profileActivation.Hour > 12)
+        {
+            activation = activation.AddDays(1);
+        }
+        var today = DateTime.UtcNow.Date;
+        var activeSince = today - activation;
+        days = Math.Min((int)activeSince.TotalDays, 7);
+        ticks = new DateTimeOffset(profileActivation).ToUnixTimeMilliseconds();
+    }
+    else
+    {
+        days = 7;
+    }
 
     var profileJson = Newtonsoft.Json.JsonConvert.SerializeObject(Model, Newtonsoft.Json.Formatting.Indented);
     var timezone = (string)ViewBag.TimeZone;
@@ -43,8 +64,23 @@
 
 <table class="table table-striped">
     <tr>
-        <th style="width: 10%">Profile Name</th>
+        <th style="width: 12%">Profile Name</th>
         <td>@ViewBag.ProfileName</td>
+    </tr>
+    <tr>
+        <th>Profile Activation</th>
+        <td>
+            @if (profileActivation == DateTime.MinValue)
+            {
+                <i class="fa fa-exclamation"></i> <i>Unknown</i>
+            }
+            else
+            {
+                <script>
+                    document.writeln(new Date(@ticks).toLocaleString());
+                </script>
+            }
+        </td>
     </tr>
     <tr>
         <th>Timezone</th>
@@ -95,7 +131,7 @@
                     var duration = endTime - basal.Minutes;
                     var title = $"{TimeSpan.FromMinutes(basal.Minutes):hh\\:mm} - {TimeSpan.FromMinutes(endTime):hh\\:mm}: {basal.Rate:0.00} U/h";
 
-                    <div class="timeline-block" style="width: @(duration * 100f / minutesInDay)%; height: @(basal.Rate * 100 / maxValue)px; margin-top: @(100 - (basal.Rate * 100 / maxValue))px" title="@title">
+                    <div class="timeline-block" style="width: @((duration * 100f / minutesInDay).ToString(CultureInfo.InvariantCulture))%; height: @((basal.Rate * 100 / maxValue).ToString(CultureInfo.InvariantCulture))px; margin-top: @((100 - (basal.Rate * 100 / maxValue)).ToString(CultureInfo.InvariantCulture))px" title="@title">
                     </div>
                 }
             </div>
@@ -204,7 +240,7 @@
         <div class="col-md-4">
             <label for="days">Days of Data</label>
             <div class="input-group">
-                <input type="number" name="days" min="1" max="30" value="7" class="form-control" required />
+                <input type="number" name="days" min="1" max="30" value="@days" class="form-control" required />
                 <span class="input-group-addon">days</span>
             </div>
         </div>

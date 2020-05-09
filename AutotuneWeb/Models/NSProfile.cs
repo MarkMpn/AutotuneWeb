@@ -12,13 +12,16 @@ namespace AutotuneWeb.Models
     {
         public string DefaultProfile { get; set; }
 
-        public IDictionary<string,NSProfileDetails> Store { get; set; }
+        public IDictionary<string, NSProfileDetails> Store { get; set; }
 
         public string Units { get; set; }
     }
 
     public class NSProfileSwitch
     {
+        [JsonProperty(PropertyName = "created_at")]
+        public DateTime CreatedAt { get; set; }
+
         [JsonProperty(PropertyName = "profile")]
         public string Name { get; set; }
 
@@ -39,16 +42,17 @@ namespace AutotuneWeb.Models
         public NSValueWithTime[] Sensitivity { get; set; }
 
         public NSValueWithTime[] Basal { get; set; }
-        
+
         public string Units { get; set; }
 
-        public static NSProfileDetails LoadFromNightscout(ref Uri url)
+        public static NSProfileDetails LoadFromNightscout(ref Uri url, out DateTime profileActivation)
         {
+            profileActivation = default;
             NSProfileDetails profile = null;
 
             // Get the profile from NS
             // Try looking for a Profile Switch event first
-            var profileSwitchUrl = new Uri(url, "/api/v1/treatments.json?find[eventType][$eq]=Profile%20Switch&count=1");
+            var profileSwitchUrl = new Uri(url, $"/api/v1/treatments.json?find[eventType][$eq]=Profile%20Switch&find[created_at][$lte]={DateTime.UtcNow:yyyy-MM-ddTHH:mmzzz}&count=1");
             var req = WebRequest.CreateHttp(profileSwitchUrl);
             using (var resp = req.GetResponse())
             using (var stream = resp.GetResponseStream())
@@ -65,6 +69,7 @@ namespace AutotuneWeb.Models
                 {
                     profile = JsonConvert.DeserializeObject<NSProfileDetails>(profileSwitches[0].ProfileJson);
                     profile.Name = profileSwitches[0].Name;
+                    profileActivation = profileSwitches[0].CreatedAt;
 
                     // Might get a profile but without a time zone - if so, store this profile but keep going to get
                     // the timezone later on.
@@ -89,12 +94,12 @@ namespace AutotuneWeb.Models
                 if (profile != null)
                 {
                     profile.TimeZone = defaultProfile.TimeZone;
-                    profile.Units = profile.Units ?? profiles.Units;
+                    profile.Units ??= profiles.Units;
                     return profile;
                 }
 
                 defaultProfile.Name = profiles.DefaultProfile;
-                defaultProfile.Units = defaultProfile.Units ?? profiles.Units;
+                defaultProfile.Units ??= profiles.Units;
                 return defaultProfile;
             }
         }
@@ -124,7 +129,7 @@ namespace AutotuneWeb.Models
                             Sensitivity = ToMgDl(s.Value),
                             Offset = s.TimeAsSeconds / 60,
                             X = i, // TODO: not sure what X is for
-                            EndOffset = i == this.Sensitivity.Length - 1 ? 1440 : (this.Sensitivity[i-1].TimeAsSeconds / 60)
+                            EndOffset = i == this.Sensitivity.Length - 1 ? 1440 : (this.Sensitivity[i - 1].TimeAsSeconds / 60)
                         })
                         .ToArray()
                 },
@@ -153,17 +158,8 @@ namespace AutotuneWeb.Models
 
         public int TimeAsSeconds
         {
-            get
-            {
-                if (_timeAsSeconds != null)
-                    return _timeAsSeconds.Value;
-
-                return (int) TimeSpan.Parse(Time).TotalSeconds;
-            }
-            set
-            {
-                _timeAsSeconds = value;
-            }
+            get => _timeAsSeconds ?? (int)TimeSpan.Parse(Time).TotalSeconds;
+            set => _timeAsSeconds = value;
         }
     }
 }

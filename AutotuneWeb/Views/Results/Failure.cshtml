@@ -1,4 +1,6 @@
-﻿@{
+﻿@model string
+
+@{
     Layout = null;
 }
 
@@ -14,7 +16,7 @@
         so try reaching out on Facebook for help. When you post to Facebook, make sure to include a screenshot of your log (attached to this email). 
     </p>
     <p>
-        This job was run with Autotune version <a href="https://github.com/openaps/oref0/tree/@ViewBag.Commit">@ViewBag.Commit</a>
+        This job was run with Autotune version <a href="https://github.com/openaps/oref0/tree/@Model">@Model</a>
     </p>
 </body>
 </html>
