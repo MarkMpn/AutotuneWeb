@@ -13,39 +13,10 @@ There are two main steps in the project:
 To implement this there are several resources required. This has been designed to run in Azure but could be adapted to run elsewhere:
 
 1. Website to receive user input and convert Nightscout profile to OpenAPS format
-2. Database to store the details of the profile to run
-3. Linux VM image with Autotune installed ready to run
-4. Azure Storage account to hold the Autotune input and output files
-5. Azure Batch account to execute the Autotune jobs on a VM instance
-6. [SendGrid](https://sendgrid.com/) account to send the Autotune results by email
-
-## Database Setup
-
-Create an Azure SQL Database and create tables `Jobs` and `Settings` as follows:
-
-```sql
-CREATE TABLE [dbo].[Jobs] (
-	[JobID] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
-	[NSUrl] [varchar](255) NOT NULL,
-	[Profile] [varchar](max) NOT NULL,
-	[CreatedAt] [datetime] NOT NULL,
-	[Units] [varchar](10) NOT NULL,
-	[CategorizeUAMAsBasal] [bit] NOT NULL,
-	[PumpBasalIncrement] [numeric](4, 3) NOT NULL,
-	[EmailResultsTo] [varchar](max) NOT NULL,
-	[ProcessingStarted] [datetime] NULL,
-	[ProcessingCompleted] [datetime] NULL,
-	[Result] [varchar](max) NULL,
-	[Failed] [bit] NULL,
-	[TimeZone] [varchar](100) NULL,
-	[DaysDuration] [int] NOT NULL
-)
-
-CREATE TABLE [dbo].[Settings] (
-	[Name] [varchar](100) NOT NULL PRIMARY KEY,
-	[Value] [varchar](100) NOT NULL
-)
-```
+2. Linux VM image with Autotune installed ready to run
+3. Azure Storage account to hold the Autotune input and output files
+4. Azure Batch account to execute the Autotune jobs on a VM instance
+5. [SendGrid](https://sendgrid.com/) account to send the Autotune results by email
 
 ## VM image setup
 
@@ -98,7 +69,6 @@ In the App Service configuration, go to the `Application settings` option and ad
 
 | Name    | Value                                              | Type     |
 |---------|----------------------------------------------------|----------|
-| Sql     | (Connection string for your Azure SQL Database)    | SQLAzure |
 | Storage | (Connection string for your Azure Storage account) | Custom   |
 
 Also add the following application settings:
