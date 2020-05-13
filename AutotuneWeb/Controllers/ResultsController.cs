@@ -87,10 +87,10 @@ namespace AutotuneWeb.Controllers
                             blob.DownloadToStream(stream);
                             stream.Position = 0;
 
-                            result = reader.ReadToEnd();
+                            var recommendations = reader.ReadToEnd();
 
                             // Parse the results
-                            var parsedResults = AutotuneResults.ParseResult(result, job);
+                            var parsedResults = AutotuneResults.ParseResult(recommendations, job);
                             parsedResults.Commit = commit;
 
                             emailBody = await _viewRenderService.RenderToStringAsync("Results/Success", parsedResults);
