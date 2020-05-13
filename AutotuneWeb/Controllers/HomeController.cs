@@ -443,7 +443,7 @@ namespace AutotuneWeb.Controllers
             var query = table.CreateQuery<Job>()
                 .Where(
                     TableQuery.CombineFilters(
-                        TableQuery.GenerateFilterCondition(nameof(Job.PartitionKey), QueryComparisons.Equal, url),
+                        TableQuery.GenerateFilterCondition(nameof(Job.PartitionKey), QueryComparisons.Equal, GetPartitionKey(url)),
                         TableOperators.And,
                         TableQuery.GenerateFilterCondition(nameof(Job.EmailResultsTo), QueryComparisons.Equal, email)
                     )
