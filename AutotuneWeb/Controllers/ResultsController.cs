@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
+using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using SendGrid;
 using SendGrid.Helpers.Mail;
@@ -24,10 +24,24 @@ namespace AutotuneWeb.Controllers
             _viewRenderService = viewRenderService;
         }
 
-        public async Task<ActionResult> JobFinishedAsync(int id, string key, string commit)
+        public async Task<ActionResult> JobFinishedAsync(string partitionKey, string rowKey, string key, string commit)
         {
             // Validate the key
             if (key != Startup.Configuration["ResultsCallbackKey"])
+                return NotFound();
+
+            // Load the job details
+            var connectionString = Startup.Configuration.GetConnectionString("Storage");
+            var tableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount.Parse(connectionString);
+            var tableClient = tableStorageAccount.CreateCloudTableClient();
+            var table = tableClient.GetTableReference("jobs");
+            table.CreateIfNotExists();
+
+            var job = table.CreateQuery<Job>()
+                .Where(j => j.PartitionKey == partitionKey && j.RowKey == rowKey)
+                .FirstOrDefault();
+
+            if (job == null)
                 return NotFound();
 
             // Connect to Azure Batch
@@ -37,15 +51,7 @@ namespace AutotuneWeb.Controllers
                 Startup.Configuration["BatchAccountKey"]);
 
             using (var batchClient = BatchClient.Open(credentials))
-            using (var con = new SqlConnection(Startup.Configuration.GetConnectionString("Sql")))
             {
-                con.Open();
-
-                // Load the job details from the database
-                var job = Job.Load(con, id);
-                if (job == null)
-                    return NotFound();
-
                 var result = "";
                 var success = false;
                 var startTime = (DateTime?)null;
@@ -55,7 +61,7 @@ namespace AutotuneWeb.Controllers
                 
                 try
                 {
-                    var jobName = $"autotune-job-{id}";
+                    var jobName = $"autotune-job-{rowKey}";
 
                     // Check if the Autotune job finished successfully
                     var autotune = batchClient.JobOperations.GetTask(jobName, "Autotune");
@@ -64,8 +70,7 @@ namespace AutotuneWeb.Controllers
                     endTime = autotune.ExecutionInformation.EndTime;
                     
                     // Connect to Azure Storage
-                    var connectionString = Startup.Configuration.GetConnectionString("Storage");
-                    var storageAccount = CloudStorageAccount.Parse(connectionString);
+                    var storageAccount = Microsoft.Azure.Storage.CloudStorageAccount.Parse(connectionString);
                     var cloudBlobClient = storageAccount.CreateCloudBlobClient();
 
                     // Find the log file produced by Autotune
@@ -111,25 +116,23 @@ namespace AutotuneWeb.Controllers
 
                 EmailResults(job.EmailResultsTo, emailBody, attachments);
 
-                // Update the details in the SQL database
-                using (var cmd = con.CreateCommand())
-                {
-                    cmd.CommandText = "UPDATE Jobs SET ProcessingStarted = @ProcessingStarted, ProcessingCompleted = @ProcessingCompleted, Result = @Result, Failed = @Failed WHERE JobID = @Id";
-                    cmd.Parameters.AddWithValue("@Id", id);
-                    cmd.Parameters.AddWithValue("@ProcessingStarted", (object)startTime ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@ProcessingCompleted", (object)endTime ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Result", result);
-                    cmd.Parameters.AddWithValue("@Failed", !success);
-                    cmd.ExecuteNonQuery();
-                }
+                // Update the details in the table
+                job.ProcessingStarted = startTime;
+                job.ProcessingCompleted = endTime;
+                job.Result = result;
+                job.Failed = !success;
+                var update = TableOperation.Replace(job);
+                await table.ExecuteAsync(update);
 
                 // Store the commit hash to identify the version of Autotune that was used
-                using (var cmd = con.CreateCommand())
-                {
-                    cmd.CommandText = "UPDATE Settings SET Value = @commit WHERE Name = 'Commit'";
-                    cmd.Parameters.AddWithValue("@Commit", commit);
-                    cmd.ExecuteNonQuery();
-                }
+                var commitSetting = new Settings();
+                commitSetting.PartitionKey = "Commit";
+                commitSetting.RowKey = "";
+                commitSetting.Value = commit;
+                var settingTable = tableClient.GetTableReference("settings");
+                settingTable.CreateIfNotExists();
+                var upsert = TableOperation.InsertOrReplace(commitSetting);
+                settingTable.Execute(upsert);
             }
 
             return Content("");

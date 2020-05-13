@@ -15,7 +15,7 @@
         }
         var today = DateTime.UtcNow.Date;
         var activeSince = today - activation;
-        days = Math.Min((int)activeSince.TotalDays, 7);
+        days = Math.Max(Math.Min((int)activeSince.TotalDays, 7), 1);
         ticks = new DateTimeOffset(profileActivation).ToUnixTimeMilliseconds();
     }
     else

@@ -97,7 +97,7 @@ namespace AutotuneWeb.Models
             {
                 output.PumpBasals[hour] = pumpOutput[$"{hour:00}:00"] ?? output.PumpBasals[hour - 1];
                 output.AutotuneBasals[hour] = autotuneOutput[$"{hour:00}:00"];
-                output.SuggestedBasals[hour] = Math.Round(output.AutotuneBasals[hour] / job.PumpBasalIncrement) * job.PumpBasalIncrement;
+                output.SuggestedBasals[hour] = Math.Round(output.AutotuneBasals[hour] / (decimal) job.PumpBasalIncrement) * (decimal) job.PumpBasalIncrement;
                 output.DaysMissed[hour] = daysMissed[$"{hour:00}:00"];
             }
 

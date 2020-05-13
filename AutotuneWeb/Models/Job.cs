@@ -1,62 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
-using Microsoft.Data.SqlClient;
-using System.Text;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace AutotuneWeb.Models
 {
-    public class Job
+    public class Job : TableEntity
     {
-        private Job()
-        {
-        }
-
-        public int JobID { get; set; }
         public string NSUrl { get; set; }
-        public string Profile { get; set; }
-        public decimal PumpBasalIncrement { get; set; }
+        public double PumpBasalIncrement { get; set; }
         public string EmailResultsTo { get; set; }
-        public string Units { get; internal set; }
-        public string TimeZone { get; internal set; }
-        public bool UAMAsBasal { get; internal set; }
+        public string Units { get; set; }
+        public string TimeZone { get; set; }
+        public bool UAMAsBasal { get; set; }
         public int Days { get; set; }
-
-        public static Job Load(SqlConnection con, int id)
-        {
-            using (var cmd = con.CreateCommand())
-            {
-                cmd.CommandText = "SELECT NSUrl, Profile, PumpBasalIncrement, EmailResultsTo, Units, TimeZone, CategorizeUAMAsBasal, DaysDuration FROM Jobs WHERE JobID = @Id";
-                cmd.Parameters.AddWithValue("@Id", id);
-
-                using (var reader = cmd.ExecuteReader())
-                {
-                    if (!reader.Read())
-                        return null;
-
-                    var i = 0;
-                    var nsUrl = reader.GetString(i++);
-                    var profile = reader.GetString(i++);
-                    var pumpBasalIncrement = reader.GetDecimal(i++);
-                    var email = reader.GetString(i++);
-                    var units = reader.GetString(i++);
-                    var timezone = reader.GetString(i++);
-                    var uamAsBasal = reader.GetBoolean(i++);
-                    var days = reader.GetInt32(i++);
-
-                    return new Job
-                    {
-                        JobID = id,
-                        NSUrl = nsUrl,
-                        Profile = profile,
-                        PumpBasalIncrement = pumpBasalIncrement,
-                        EmailResultsTo = email,
-                        Units = units,
-                        TimeZone = timezone,
-                        UAMAsBasal = uamAsBasal,
-                        Days = days
-                    };
-                }
-            }
-        }
+        public DateTime? ProcessingStarted { get; set; }
+        public DateTime? ProcessingCompleted { get; set; }
+        public string Result { get; set; }
+        public bool Failed { get; set; }
     }
 }
