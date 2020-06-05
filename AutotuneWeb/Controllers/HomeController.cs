@@ -162,7 +162,6 @@ namespace AutotuneWeb.Controllers
 
             var existing = table.CreateQuery<Job>()
                 .Where(j => j.PartitionKey == job.PartitionKey && !(j.ProcessingCompleted < DateTime.Now || j.ProcessingCompleted > DateTime.Now))
-                .Select(j => new { j.RowKey, j.ProcessingStarted, j.ProcessingCompleted })
                 .FirstOrDefault();
 
             int queuePos;
@@ -180,17 +179,29 @@ namespace AutotuneWeb.Controllers
                 using (var batchClient = BatchClient.Open(credentials))
                 {
                     var existingJobName = $"autotune-job-{existing.RowKey}";
-                    var existingTask = batchClient.JobOperations.GetTask(existingJobName, "Autotune");
 
-                    existingJobStarted = existingTask.ExecutionInformation.StartTime;
-                    queuePos = batchClient.JobOperations.ListJobs(new ODATADetailLevel(filterClause: "state eq 'active'", selectClause: "id")).Count();
+                    try
+                    {
+                        var existingTask = batchClient.JobOperations.GetTask(existingJobName, "Autotune");
+
+                        existingJobStarted = existingTask.ExecutionInformation.StartTime;
+                        queuePos = batchClient.JobOperations.ListJobs(new ODATADetailLevel(filterClause: "state eq 'active'", selectClause: "id")).Count();
+
+                        if (existingJobStarted == null)
+                            ViewBag.QueuePos = queuePos;
+
+                        ViewBag.JobStarted = existingJobStarted;
+                        return View("AlreadyRunning", new Job { PartitionKey = job.PartitionKey, RowKey = existing.RowKey });
+                    }
+                    catch (BatchException)
+                    {
+                        // Job does not exist in Batch account, may have been deleted. Mark this job as completed and move on to creating a new job
+                        existing.Failed = true;
+                        existing.ProcessingCompleted = DateTime.Now;
+                        existing.Result = "Task missing from Batch account";
+                        table.Execute(TableOperation.Replace(existing));
+                    }
                 }
-
-                if (existingJobStarted == null)
-                    ViewBag.QueuePos = queuePos;
-
-                ViewBag.JobStarted = existingJobStarted;
-                return View("AlreadyRunning", new Job { PartitionKey = job.PartitionKey, RowKey = existing.RowKey });
             }
 
             job.RowKey = Guid.NewGuid().ToString();
