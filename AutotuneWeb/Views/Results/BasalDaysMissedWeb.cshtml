@@ -1,0 +1,12 @@
+﻿@model Tuple<int,int>
+
+@{ 
+    var daysTotal = Model.Item1;
+    var daysMissed = Model.Item2;
+}
+
+@for (var i = 0; i < daysTotal; i++)
+{
+    var color = i < (daysTotal - daysMissed) ? "#008000" : "#ff0000";
+    <i class="fa fa-square" style="color: @color"></i>
+}

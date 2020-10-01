@@ -24,6 +24,95 @@ namespace AutotuneWeb.Controllers
             _viewRenderService = viewRenderService;
         }
 
+        public ActionResult Index(string nsUrl)
+        {
+            var partitionKey = HomeController.GetPartitionKey(nsUrl);
+
+            var connectionString = Startup.Configuration.GetConnectionString("Storage");
+            var storageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount.Parse(connectionString);
+            var tableClient = storageAccount.CreateCloudTableClient();
+            var table = tableClient.GetTableReference("jobs");
+            table.CreateIfNotExists();
+
+            var jobs = table.CreateQuery<Job>()
+                .Where(j => j.PartitionKey == partitionKey)
+                .ToList();
+
+            jobs.Sort((x, y) => y.Timestamp.CompareTo(x.Timestamp));
+
+            ViewBag.NSUrl = nsUrl;
+            return View(jobs);
+        }
+
+        public ActionResult Details(string nsUrl, string jobId)
+        {
+            var partitionKey = HomeController.GetPartitionKey(nsUrl);
+
+            // Load the job details
+            var connectionString = Startup.Configuration.GetConnectionString("Storage");
+            var tableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount.Parse(connectionString);
+            var tableClient = tableStorageAccount.CreateCloudTableClient();
+            var table = tableClient.GetTableReference("jobs");
+            table.CreateIfNotExists();
+
+            var job = table.CreateQuery<Job>()
+                .Where(j => j.PartitionKey == partitionKey && j.RowKey == jobId)
+                .FirstOrDefault();
+
+            if (job == null)
+                return NotFound();
+
+            // Connect to Azure Batch
+            var credentials = new BatchSharedKeyCredentials(
+                Startup.Configuration["BatchAccountUrl"],
+                Startup.Configuration["BatchAccountName"],
+                Startup.Configuration["BatchAccountKey"]);
+
+            using (var batchClient = BatchClient.Open(credentials))
+            {
+                try
+                {
+                    var jobName = $"autotune-job-{jobId}";
+
+                    // Check if the Autotune job finished successfully
+                    var autotune = batchClient.JobOperations.GetTask(jobName, "Autotune");
+                    var success = autotune.ExecutionInformation.ExitCode == 0;
+
+                    // Connect to Azure Storage
+                    var storageAccount = Microsoft.Azure.Storage.CloudStorageAccount.Parse(connectionString);
+                    var cloudBlobClient = storageAccount.CreateCloudBlobClient();
+
+                    // Find the log file produced by Autotune
+                    var container = cloudBlobClient.GetContainerReference(jobName);
+
+                    if (success)
+                    {
+                        var blob = container.GetBlobReference("autotune_recommendations.log");
+
+                        using (var stream = new MemoryStream())
+                        using (var reader = new StreamReader(stream))
+                        {
+                            // Download the log file
+                            blob.DownloadToStream(stream);
+                            stream.Position = 0;
+
+                            var recommendations = reader.ReadToEnd();
+
+                            // Parse the results
+                            var parsedResults = AutotuneResults.ParseResult(recommendations, job);
+
+                            return View("SuccessDetails", parsedResults);
+                        }
+                    }
+                }
+                catch
+                {
+                }
+
+                return View("ErrorDetails", job);
+            }
+        }
+
         public async Task<ActionResult> JobFinishedAsync(string partitionKey, string rowKey, string key, string commit)
         {
             // Validate the key

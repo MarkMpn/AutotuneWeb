@@ -1,0 +1,54 @@
+﻿@model List<Job>
+
+@{
+    ViewBag.Title = "Home Page";
+}
+
+<h1>Results</h1>
+
+<p>
+    Please see the details of the jobs you have run below.
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var job in Model)
+        {
+            <tr>
+                <th>@job.Timestamp.ToString("yyyy-MM-dd")</th>
+                <td>
+                    @if (job.ProcessingCompleted != null)
+                    {
+                        <a href="Details?nsUrl=@ViewBag.NSUrl&jobId=@job.RowKey">
+                            @if (job.Failed)
+                            {
+                                <i class="fa fa-times-circle" style="color: tomato"></i> @:Error
+                            }
+                            else
+                            {
+                                <i class="fa fa-check-circle" style="color: green"></i> @:Complete
+                            }
+                        </a>
+                    }
+                    else
+                    {
+                        <i class="fa fa-refresh" style="color: gray"></i> @:Running...
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (Model.Any(j => j.ProcessingCompleted == null))
+{
+    <script type="text/javascript">
+        setTimeout(location.reload, 10000);
+    </script>
+}

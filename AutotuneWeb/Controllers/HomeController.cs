@@ -217,7 +217,7 @@ namespace AutotuneWeb.Controllers
 
             Response.Cookies.Append("email", emailResultsTo);
 
-            return View(queuePos);
+            return RedirectToAction("Index", "Results", new { nsUrl = nsUrl.ToString() });
         }
 
         private void UpdateStats(CloudTableClient tableClient)
@@ -270,7 +270,7 @@ namespace AutotuneWeb.Controllers
             }
         }
 
-        private string GetPartitionKey(string nsUrl)
+        internal static string GetPartitionKey(string nsUrl)
         {
             using (var sha1 = SHA1.Create())
             {
