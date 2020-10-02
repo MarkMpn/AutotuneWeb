@@ -12,6 +12,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using StorageException = Microsoft.Azure.Storage.StorageException;
 
 namespace AutotuneWeb.Controllers
 {
@@ -85,6 +86,12 @@ namespace AutotuneWeb.Controllers
                     // Find the log file produced by Autotune
                     var container = cloudBlobClient.GetContainerReference(jobName);
 
+                    ViewBag.Logs = container.ListBlobs()
+                        .Select(b => new CloudBlockBlob(b.Uri, cloudBlobClient))
+                        .Where(b => b.Name != "autotune_recommendations.log" && b.Name != "profile.json")
+                        .Select(b => b.Name)
+                        .ToArray();
+
                     if (success)
                     {
                         var blob = container.GetBlobReference("autotune_recommendations.log");
@@ -105,11 +112,60 @@ namespace AutotuneWeb.Controllers
                         }
                     }
                 }
+                catch (StorageException ex)
+                {
+                    if (ex.RequestInformation.ErrorCode == "BlobNotFound")
+                        return View("JobExpired");
+                }
                 catch
                 {
                 }
 
-                return View("ErrorDetails", job);
+                return View("FailureDetails", job);
+            }
+        }
+
+        public ActionResult DownloadLog(string nsUrl, string jobId, string filename)
+        {
+            var partitionKey = HomeController.GetPartitionKey(nsUrl);
+
+            // Load the job details
+            var connectionString = Startup.Configuration.GetConnectionString("Storage");
+            var tableStorageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount.Parse(connectionString);
+            var tableClient = tableStorageAccount.CreateCloudTableClient();
+            var table = tableClient.GetTableReference("jobs");
+            table.CreateIfNotExists();
+
+            var job = table.CreateQuery<Job>()
+                .Where(j => j.PartitionKey == partitionKey && j.RowKey == jobId)
+                .FirstOrDefault();
+
+            if (job == null)
+                return NotFound();
+
+            try
+            {
+                var jobName = $"autotune-job-{jobId}";
+
+                // Connect to Azure Storage
+                var storageAccount = Microsoft.Azure.Storage.CloudStorageAccount.Parse(connectionString);
+                var cloudBlobClient = storageAccount.CreateCloudBlobClient();
+
+                // Find the log file produced by Autotune
+                var container = cloudBlobClient.GetContainerReference(jobName);
+
+                var blob = container.GetBlobReference(filename);
+                var stream = new MemoryStream();
+                
+                // Download the log file
+                blob.DownloadToStream(stream);
+                stream.Position = 0;
+
+                return File(stream, "text/plain", filename);
+            }
+            catch
+            {
+                return NotFound();
             }
         }
 

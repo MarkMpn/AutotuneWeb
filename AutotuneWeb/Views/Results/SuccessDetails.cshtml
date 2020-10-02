@@ -120,3 +120,10 @@ else
     the data for that hour being dominated by other factors such as carb absorption. This is currently an experimental
     new feature to try to give an indication of how much trust to place in each suggestion.
 </p>
+
+@foreach (var log in (string[])ViewBag.Logs)
+{
+    <p>
+        <a href="/Results/DownloadLog?nsUrl=@Model.Job.NSUrl&jobId=@Model.Job.RowKey&filename=@log" class="btn btn-default">Download Log</a>
+    </p>
+}

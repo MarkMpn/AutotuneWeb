@@ -1,0 +1,15 @@
+﻿@model Job
+
+<h1>Autotune Error</h1>
+<p>Sorry, an error occurred while running Autotune.</p>
+<p>
+    Sometimes, re-running the job might get it to work on the second try. If it still fails there's probably something else going wrong,
+    so try reaching out on Facebook for help. When you post to Facebook, make sure to include a screenshot of your log.
+</p>
+
+@foreach (var log in (string[])ViewBag.Logs)
+{
+    <p>
+        <a href="/Results/DownloadLog?nsUrl=@Model.NSUrl&jobId=@Model.RowKey&filename=@log" class="btn btn-primary">Download Log</a>
+    </p>
+}
