@@ -5,6 +5,16 @@
     var secondsInDay = 60 * 60 * 24;
 }
 
+@if (ViewBag.PreviousResults)
+{
+    <div class="alert alert-info">
+        <p>Looking for your previous results?</p>
+        <p>
+            <a href="/Results/Index?nsUrl=@ViewBag.NSUrl" class="btn btn-success">View Results</a>
+        </p>
+    </div>
+}
+
 <h1>Multiple Values in Profile</h1>
 
 @if (Model.CarbRatio.Length > 1 && Model.Sensitivity.Length > 1)

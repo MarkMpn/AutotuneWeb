@@ -53,6 +53,7 @@ namespace AutotuneWeb.Controllers
             ModelState.SetModelValue(nameof(nsUrl), nsUrl, nsUrl.ToString());
             ViewBag.NSUrl = nsUrl;
             ViewBag.ProfileActivation = profileActivation;
+            ViewBag.PreviousResults = HasPreviousResults(nsUrl);
 
             nsProfile.CarbRatio = CombineAdjacentTimeBlocks(nsProfile.CarbRatio);
             nsProfile.Sensitivity = CombineAdjacentTimeBlocks(nsProfile.Sensitivity);
@@ -87,6 +88,22 @@ namespace AutotuneWeb.Controllers
             ViewBag.TimeZone = nsProfile.TimeZone;
             ViewBag.Email = Request.Cookies["email"];
             return View("Converted", oapsProfile);
+        }
+
+        private bool HasPreviousResults(Uri nsUrl)
+        {
+            var connectionString = Startup.Configuration.GetConnectionString("Storage");
+            var storageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount.Parse(connectionString);
+            var tableClient = storageAccount.CreateCloudTableClient();
+            var table = tableClient.GetTableReference("jobs");
+            table.CreateIfNotExists();
+            var partitionKey = GetPartitionKey(nsUrl.ToString());
+
+            var existing = table.CreateQuery<Job>()
+                .Where(j => j.PartitionKey == partitionKey)
+                .FirstOrDefault();
+
+            return existing != null;
         }
 
         class NSTempBasal
