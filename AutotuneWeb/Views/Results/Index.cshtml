@@ -49,6 +49,6 @@
 @if (Model.Any(j => j.ProcessingCompleted == null))
 {
     <script type="text/javascript">
-        setTimeout(location.reload, 10000);
+        setTimeout(() => window.location.reload(), 10000);
     </script>
 }
