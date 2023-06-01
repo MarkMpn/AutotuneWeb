@@ -18,6 +18,40 @@ To implement this there are several resources required. This has been designed t
 4. Azure Batch account to execute the Autotune jobs on a VM instance
 5. [SendGrid](https://sendgrid.com/) account to send the Autotune results by email
 
+## Running locally
+
+This project can be built and ran locally using .NET Core CLI with ASP.NET Core Runtime 3.1.
+
+*These instructions assume that you already have Git installed since it is needed for building AndroidAPS.
+If not, you can follow the instructions here to install it: https://androidaps.readthedocs.io/en/latest/Installing-AndroidAPS/git-install.html*
+
+1. Download and install .NET Core 3.1 SDK: https://dotnet.microsoft.com/en-us/download/dotnet/3.1
+2. Open command line.
+3. Clone this project and `cd` into its directory:
+```
+git clone https://github.com/MarkMpn/AutotuneWeb
+cd AutotuneWeb
+```
+4. Build the project:
+```
+dotnet publish
+```
+5. `cd` into the build output directory:
+```
+cd AutotuneWeb/bin/Debug/netcoreapp3.1/publish
+```
+6. Start the web application:
+```
+dotnet AutotuneWeb.dll
+```
+7. The project is now hosted locally at the URLs listed in the command line (`http://localhost:5000` and `https://localhost:5001` in the following case):
+```
+info: Microsoft.Hosting.Lifetime[0]
+      Now listening on: http://localhost:5000
+info: Microsoft.Hosting.Lifetime[0]
+      Now listening on: https://localhost:5001
+```
+
 ## VM image setup
 
 In Azure, create a new Linux VM. Once the VM is provisioned, install Autotune using the standard installation instructions. In my case I followed the instructions
