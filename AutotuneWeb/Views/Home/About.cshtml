@@ -26,7 +26,7 @@
     by Autotune may be misleading.</dd>
     
     <dt>I get a 401 error below my URL and it doesn't run.</dt>
-    <dd>AutotuneWeb pulls from your Nightscout. Nightscout must be set with "readable" in AUTH_DEFAULT_ROLES in order for your Nightscout to be readable by AutotuneWeb</dd>
+    <dd>AutotuneWeb pulls from your Nightscout. In order for your Nightscout to be readable by AutotuneWeb, you must either have your Nightscout's AUTH_DEFAULT_ROLES be set to "readable" or provide AutotuneWeb with a token URL that has the "readable" role. <a href="https://nightscout.github.io/nightscout/security/#create-a-token">You can find information on how to create a token in Nightscout's documentation.</a></dd>
     
     <dt>I get a warning about missing "rate" property in my temp basal data</dt>
     <dd>This is an extra bit of information that Autotune expects in the Nightscout data that isn't always added. If this data is missing then
