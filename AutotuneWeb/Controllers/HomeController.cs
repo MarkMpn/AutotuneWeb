@@ -113,8 +113,11 @@ namespace AutotuneWeb.Controllers
 
         private bool TempBasalIncludesRateProperty(Uri url)
         {
-            var profileSwitchUrl = new Uri(url, "/api/v1/treatments.json?find[eventType][$eq]=Temp%20Basal&count=10");
-            var req = WebRequest.CreateHttp(profileSwitchUrl);
+            var queryString = "find[eventType][$eq]=Temp%20Basal&count=10";
+            var profileSwitchUrl = new UriBuilder(url);
+            profileSwitchUrl.Path = "/api/v1/treatments.json";
+            profileSwitchUrl.Query = profileSwitchUrl.Query.Length > 1 ? $"{profileSwitchUrl.Query}&{queryString}" : queryString;
+            var req = WebRequest.CreateHttp(profileSwitchUrl.Uri);
             using (var resp = req.GetResponse())
             using (var stream = resp.GetResponseStream())
             using (var reader = new StreamReader(stream))
