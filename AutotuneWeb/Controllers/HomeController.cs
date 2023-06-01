@@ -53,6 +53,7 @@ namespace AutotuneWeb.Controllers
             ModelState.SetModelValue(nameof(nsUrl), nsUrl, nsUrl.ToString());
             ViewBag.NSUrl = nsUrl;
             ViewBag.ProfileActivation = profileActivation;
+            ViewBag.CanRunAutotuneInCloud = CanRunAutotuneInCloud();
             ViewBag.PreviousResults = HasPreviousResults(nsUrl);
 
             nsProfile.CarbRatio = CombineAdjacentTimeBlocks(nsProfile.CarbRatio);
@@ -90,9 +91,33 @@ namespace AutotuneWeb.Controllers
             return View("Converted", oapsProfile);
         }
 
+        private bool CanRunAutotuneInCloud()
+        {
+            string[] requiredKeys = {
+                "Storage",
+                "BatchAccountUrl",
+                "BatchAccountName",
+                "BatchAccountKey",
+                "BatchPoolId",
+                "SendGridApiKey",
+                "SendGridFromAddress",
+                "ResultsCallbackKey",
+            };
+            foreach (var key in requiredKeys)
+            {
+                if (String.IsNullOrEmpty(Startup.Configuration[key]))
+                    return false;
+            }
+            return true;
+        }
+
         private bool HasPreviousResults(Uri nsUrl)
         {
             var connectionString = Startup.Configuration.GetConnectionString("Storage");
+            if (connectionString == null)
+            {
+                return false;
+            }
             var storageAccount = Microsoft.Azure.Cosmos.Table.CloudStorageAccount.Parse(connectionString);
             var tableClient = storageAccount.CreateCloudTableClient();
             var table = tableClient.GetTableReference("jobs");
