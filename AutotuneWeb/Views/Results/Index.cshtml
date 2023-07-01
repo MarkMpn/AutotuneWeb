@@ -25,7 +25,7 @@
                 <td>
                     @if (job.ProcessingCompleted != null)
                     {
-                        <a href="/Results/Details?nsUrl=@ViewBag.NSUrl&jobId=@job.RowKey">
+                        <a href="/Results/Details?nsUrl=@Uri.EscapeDataString(ViewBag.NSUrl.ToString())&jobId=@job.RowKey">
                             @if (job.Failed)
                             {
                                 <i class="fa fa-times-circle" style="color: tomato"></i> @:Error

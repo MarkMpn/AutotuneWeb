@@ -52,15 +52,23 @@ namespace AutotuneWeb.Models
 
             // Get the profile from NS
             // Try looking for a Profile Switch event first
-            var profileSwitchUrl = new Uri(url, $"/api/v1/treatments.json?find[eventType][$eq]=Profile%20Switch&find[created_at][$lte]={DateTime.UtcNow:yyyy-MM-ddTHH:mmzzz}&count=1");
-            var req = WebRequest.CreateHttp(profileSwitchUrl);
+            var queryString = $"find[eventType][$eq]=Profile%20Switch&find[created_at][$lte]={DateTime.UtcNow:yyyy-MM-ddTHH:mmzzz}&count=1";
+
+            var baseUrl = new UriBuilder(url) { Path = "/" };
+            var profileSwitchUrl = new UriBuilder(baseUrl.Uri) {
+                Path = "/api/v1/treatments.json",
+                Query = baseUrl.Query.Length > 1 ? $"{baseUrl.Query}&{queryString}" : queryString
+            };
+
+            var req = WebRequest.CreateHttp(profileSwitchUrl.Uri);
             using (var resp = req.GetResponse())
             using (var stream = resp.GetResponseStream())
             using (var reader = new StreamReader(stream))
             {
                 // Change the URL based on any redirects we've followed and remove any trailing path elements that might have
                 // been included in the input.
-                url = new Uri(resp.ResponseUri, "/");
+                baseUrl = new UriBuilder(resp.ResponseUri) { Path = "/", Query = baseUrl.Query };
+                url = baseUrl.Uri;
 
                 var json = reader.ReadToEnd();
                 var profileSwitches = JsonConvert.DeserializeObject<NSProfileSwitch[]>(json);
@@ -79,9 +87,9 @@ namespace AutotuneWeb.Models
             }
 
             // If there wasn't a profile switch, try again looking at the latest profile
-            var profileUrl = new Uri(url, "/api/v1/profile/current");
+            var profileUrl = new UriBuilder(baseUrl.Uri) { Path = "/api/v1/profile/current" };
 
-            req = WebRequest.CreateHttp(profileUrl);
+            req = WebRequest.CreateHttp(profileUrl.Uri);
             using (var resp = req.GetResponse())
             using (var stream = resp.GetResponseStream())
             using (var reader = new StreamReader(stream))
