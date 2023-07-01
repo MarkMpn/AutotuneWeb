@@ -162,7 +162,14 @@
     </li>
     <li>
         Run Autotune with
-        <code>oref0-autotune --dir=~/myopenaps --ns-host=@ViewBag.NSUrl --start-date=YYYY-MM-DD</code>
+        @if (String.IsNullOrEmpty(ViewBag.ApiSecret))
+        {
+            <code>oref0-autotune --dir=~/myopenaps --ns-host=@ViewBag.NSUrlBase --start-date=YYYY-MM-DD</code>
+        }
+        else
+        {
+            <code>API_SECRET=@ViewBag.ApiSecret oref0-autotune --dir=~/myopenaps --ns-host=@ViewBag.NSUrlBase --start-date=YYYY-MM-DD</code>
+        }
     </li>
 </ol>
 
@@ -175,6 +182,7 @@
 @using (Html.BeginForm("RunJob", "Home"))
 {
     @Html.Hidden("nsUrl", (Uri)ViewBag.NSUrl)
+    @Html.Hidden("apiSecret", (string)ViewBag.ApiSecret)
     @Html.Hidden("oapsProfile", profileJson)
     @Html.Hidden("units", (string)ViewBag.Units)
     @Html.Hidden("timezone", (string)ViewBag.TimeZone)
