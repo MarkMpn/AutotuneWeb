@@ -413,8 +413,8 @@ namespace AutotuneWeb.Controllers
                 // Get the URL for the JobFinished action that the recommendations can be uploaded to to generate the email
                 var uploadUrl = Url.Action("JobFinished", "Results", new { partitionKey = jobDetails.PartitionKey, rowKey = jobDetails.RowKey, key = Startup.Configuration["ResultsCallbackKey"] }, Request.Scheme);
                 var uploadCommandLine = $"/bin/sh -c '" +
-                    "cd /usr/src/oref0 && " +
-                    $"wget -O /dev/null -o /dev/null {uploadUrl.Replace("&", "\\&")}\\&commit=$(git rev-parse --short HEAD)" +
+                    //"cd /usr/src/oref0 && " +
+                    $"wget -O /dev/null -o /dev/null {uploadUrl.Replace("&", "\\&")}\\&commit=unknown" + //$(git rev-parse --short HEAD)" +
                     "'";
                 var uploadTask = new CloudTask("Upload", uploadCommandLine);
                 uploadTask.DependsOn = TaskDependencies.OnId(task.Id);
