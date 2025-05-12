@@ -25,6 +25,9 @@
     compare from when it runs. If your current Nightscout profile does not accurately reflect the settings you're using, the suggestions generated
     by Autotune may be misleading.</dd>
     
+    <dt>I get a 401 error below my URL and it doesn't run.</dt>
+    <dd>AutotuneWeb pulls from your Nightscout. Nightscout must be set with "readable" in AUTH_DEFAULT_ROLES in order for your Nightscout to be readable by AutotuneWeb</dd>
+    
     <dt>I get a warning about missing "rate" property in my temp basal data</dt>
     <dd>This is an extra bit of information that Autotune expects in the Nightscout data that isn't always added. If this data is missing then
     Autotune won't have a full picture of how much insulin has been delivered and therefore the recommendations will be out and should not be used.</dd>
