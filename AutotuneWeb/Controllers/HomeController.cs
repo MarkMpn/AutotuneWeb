@@ -200,15 +200,38 @@ namespace AutotuneWeb.Controllers
                     try
                     {
                         var existingTask = batchClient.JobOperations.GetTask(existingJobName, "Autotune");
+                        var uploadTask = batchClient.JobOperations.GetTask(existingJobName, "Upload");
 
-                        existingJobStarted = existingTask.ExecutionInformation.StartTime;
-                        queuePos = batchClient.JobOperations.ListJobs(new ODATADetailLevel(filterClause: "state eq 'active'", selectClause: "id")).Count();
+                        if (existingTask == null ||
+                            existingTask.ExecutionInformation?.Result == TaskExecutionResult.Failure ||
+                            uploadTask == null ||
+                            uploadTask.ExecutionInformation?.Result == TaskExecutionResult.Failure)
+                        {
+                            // Job has failed. Mark this job as completed and move on to creating a new job
+                            try
+                            {
+                                batchClient.JobOperations.TerminateJob(existingJobName);
+                            }
+                            catch (BatchException)
+                            {
+                            }
 
-                        if (existingJobStarted == null)
-                            ViewBag.QueuePos = queuePos;
+                            existing.Failed = true;
+                            existing.ProcessingCompleted = DateTime.Now;
+                            existing.Result = "Previous job failed";
+                            table.Execute(TableOperation.Replace(existing));
+                        }
+                        else
+                        {
+                            existingJobStarted = existingTask.ExecutionInformation.StartTime;
+                            queuePos = batchClient.JobOperations.ListJobs(new ODATADetailLevel(filterClause: "state eq 'active'", selectClause: "id")).Count();
 
-                        ViewBag.JobStarted = existingJobStarted;
-                        return View("AlreadyRunning", new Job { PartitionKey = job.PartitionKey, RowKey = existing.RowKey });
+                            if (existingJobStarted == null)
+                                ViewBag.QueuePos = queuePos;
+
+                            ViewBag.JobStarted = existingJobStarted;
+                            return View("AlreadyRunning", new Job { PartitionKey = job.PartitionKey, RowKey = existing.RowKey });
+                        }
                     }
                     catch (BatchException)
                     {
