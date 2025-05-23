@@ -16,6 +16,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace AutotuneWeb.Controllers
 {
@@ -51,7 +52,9 @@ namespace AutotuneWeb.Controllers
             }
 
             ModelState.SetModelValue(nameof(nsUrl), nsUrl, nsUrl.ToString());
+            ViewBag.ApiSecret = HttpUtility.ParseQueryString(nsUrl.Query)["token"]?.Split(",")[^1];
             ViewBag.NSUrl = nsUrl;
+            ViewBag.NSUrlBase = new Uri(nsUrl.GetLeftPart(UriPartial.Path));
             ViewBag.ProfileActivation = profileActivation;
             ViewBag.PreviousResults = HasPreviousResults(nsUrl);
 
@@ -113,8 +116,11 @@ namespace AutotuneWeb.Controllers
 
         private bool TempBasalIncludesRateProperty(Uri url)
         {
-            var profileSwitchUrl = new Uri(url, "/api/v1/treatments.json?find[eventType][$eq]=Temp%20Basal&count=10");
-            var req = WebRequest.CreateHttp(profileSwitchUrl);
+            var queryString = "find[eventType][$eq]=Temp%20Basal&count=10";
+            var profileSwitchUrl = new UriBuilder(url);
+            profileSwitchUrl.Path = "/api/v1/treatments.json";
+            profileSwitchUrl.Query = profileSwitchUrl.Query.Length > 1 ? $"{profileSwitchUrl.Query}&{queryString}" : queryString;
+            var req = WebRequest.CreateHttp(profileSwitchUrl.Uri);
             using (var resp = req.GetResponse())
             using (var stream = resp.GetResponseStream())
             using (var reader = new StreamReader(stream))
@@ -139,7 +145,7 @@ namespace AutotuneWeb.Controllers
             return combined.ToArray();
         }
 
-        public async Task<ActionResult> RunJob(Uri nsUrl, string oapsProfile, string units, string timezone, bool? uamAsBasal, double pumpBasalIncrement, decimal? min5MCarbImpact, string curve, string emailResultsTo, int days)
+        public async Task<ActionResult> RunJob(Uri nsUrl, string apiSecret, string oapsProfile, string units, string timezone, bool? uamAsBasal, double pumpBasalIncrement, decimal? min5MCarbImpact, string curve, string emailResultsTo, int days)
         {
             if (min5MCarbImpact != null || !String.IsNullOrEmpty(curve))
             {
@@ -162,6 +168,7 @@ namespace AutotuneWeb.Controllers
             {
                 PartitionKey = GetPartitionKey(nsUrl.ToString()),
                 NSUrl = nsUrl.ToString(),
+                ApiSecret = apiSecret,
                 Units = units,
                 TimeZone = timezone,
                 UAMAsBasal = uamAsBasal.GetValueOrDefault(),
@@ -392,6 +399,9 @@ namespace AutotuneWeb.Controllers
                 job.OnAllTasksComplete = OnAllTasksComplete.TerminateJob;
                 await job.CommitAsync();
 
+                var nsHost = (new Uri(jobDetails.NSUrl)).GetLeftPart(UriPartial.Path);
+                var nsApiSecret = jobDetails.ApiSecret != "" ? $"API_SECRET='{jobDetails.ApiSecret}' " : "";
+
                 // Add a task to the job to run Autotune
                 var commandLine = "/bin/sh -c '" +
                     "cd \"$AZ_BATCH_TASK_WORKING_DIR\" && " +
@@ -401,7 +411,7 @@ namespace AutotuneWeb.Controllers
                     "cp settings/profile.json settings/autotune.json && " +
                     $"TZ='{jobDetails.TimeZone}' && " +
                     "export TZ && " +
-                    $"oref0-autotune --dir=$AZ_BATCH_TASK_WORKING_DIR --ns-host={jobDetails.NSUrl} --start-date={DateTime.Now.AddDays(-jobDetails.Days):yyyy-MM-dd} --end-date={DateTime.Now.AddDays(-1):yyyy-MM-dd} --categorize-uam-as-basal={(jobDetails.UAMAsBasal ? "true" : "false")}" +
+                    $"{nsApiSecret}oref0-autotune --dir=$AZ_BATCH_TASK_WORKING_DIR --ns-host={nsHost} --start-date={DateTime.Now.AddDays(-jobDetails.Days):yyyy-MM-dd} --end-date={DateTime.Now.AddDays(-1):yyyy-MM-dd} --categorize-uam-as-basal={(jobDetails.UAMAsBasal ? "true" : "false")}" +
                     "'";
 
                 var task = new CloudTask("Autotune", commandLine);

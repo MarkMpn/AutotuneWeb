@@ -10,6 +10,6 @@
 @foreach (var log in (string[])ViewBag.Logs)
 {
     <p>
-        <a href="/Results/DownloadLog?nsUrl=@Model.NSUrl&jobId=@Model.RowKey&filename=@log" class="btn btn-primary">Download Log</a>
+        <a href="/Results/DownloadLog?nsUrl=@Uri.EscapeDataString(Model.NSUrl.ToString())&jobId=@Model.RowKey&filename=@log" class="btn btn-primary">Download Log</a>
     </p>
 }
