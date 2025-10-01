@@ -1,3 +1,6 @@
+using AutotuneWeb.Config;
+using Azure.Core;
+using Azure.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +24,15 @@ namespace AutotuneWeb
         {
             services.AddControllersWithViews().AddNewtonsoftJson();
             services.AddScoped<ViewRenderService>();
+
+#if DEBUG
+            services.AddSingleton<TokenCredential, VisualStudioCredential>();
+#else
+            var clientId = Configuration.GetValue<string>("ManagedIdentityClientId");
+            services.AddSingleton<TokenCredential>(new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(clientId)));
+#endif
+
+            services.AddOptions<EmailConfig>().BindConfiguration("Email");
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

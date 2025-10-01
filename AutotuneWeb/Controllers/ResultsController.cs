@@ -1,4 +1,7 @@
-﻿using AutotuneWeb.Models;
+﻿using AutotuneWeb.Config;
+using AutotuneWeb.Models;
+using Azure.Communication.Email;
+using Azure.Core;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
@@ -6,8 +9,7 @@ using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Configuration;
-using SendGrid;
-using SendGrid.Helpers.Mail;
+using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Linq;
@@ -19,10 +21,17 @@ namespace AutotuneWeb.Controllers
     public class ResultsController : Controller
     {
         private readonly ViewRenderService _viewRenderService;
+        private readonly TokenCredential _tokenCredential;
+        private readonly IOptions<EmailConfig> _emailConfig;
 
-        public ResultsController(ViewRenderService viewRenderService)
+        public ResultsController(
+            ViewRenderService viewRenderService,
+            TokenCredential tokenCredential,
+            IOptions<EmailConfig> emailConfig)
         {
             _viewRenderService = viewRenderService;
+            _tokenCredential = tokenCredential;
+            _emailConfig = emailConfig;
         }
 
         public ActionResult Index(string nsUrl)
@@ -259,7 +268,7 @@ namespace AutotuneWeb.Controllers
                     emailBody = await _viewRenderService.RenderToStringAsync("Results/Failure", commit);
                 }
 
-                EmailResults(job.EmailResultsTo, emailBody, attachments);
+                await EmailResultsAsync(job.EmailResultsTo, emailBody, attachments);
 
                 // Update the details in the table
                 job.ProcessingStarted = startTime;
@@ -283,25 +292,28 @@ namespace AutotuneWeb.Controllers
             return Content("");
         }
 
-        private void EmailResults(string emailAddress, string emailBody, CloudBlob[] attachments)
+        private async Task EmailResultsAsync(string emailAddress, string emailBody, CloudBlob[] attachments)
         {
-            var apiKey = Startup.Configuration["SendGridApiKey"];
-            var client = new SendGridClient(apiKey);
-            var from = new EmailAddress(Startup.Configuration["SendGridFromAddress"], "Autotune");
-            var subject = "Autotune Results";
-            var to = new EmailAddress(emailAddress);
-            var msg = MailHelper.CreateSingleEmail(from, to, subject, "", emailBody);
+            var message = new EmailMessage(
+                senderAddress: _emailConfig.Value.FromAddress,
+                recipientAddress: emailAddress,
+                content: new EmailContent("Autotune Results")
+                {
+                    PlainText = emailBody,
+                    Html = emailBody
+                });
 
             foreach (var attachment in attachments)
             {
                 using (var stream = new MemoryStream())
                 {
-                    attachment.DownloadToStream(stream);
-                    msg.AddAttachment(attachment.Name, Convert.ToBase64String(stream.ToArray()));
+                    await attachment.DownloadToStreamAsync(stream);
+                    message.Attachments.Add(new EmailAttachment(attachment.Name, "application/octet-stream", await BinaryData.FromStreamAsync(stream)));
                 }
             }
             
-            client.SendEmailAsync(msg).Wait();
+            var client = new EmailClient(new Uri(_emailConfig.Value.ResourceEndpoint), _tokenCredential);
+            await client.SendAsync(Azure.WaitUntil.Started, message);
         }
     }
 }
