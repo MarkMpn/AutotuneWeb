@@ -1,20 +1,19 @@
 ﻿using AutotuneWeb.Config;
 using AutotuneWeb.Models;
+using Azure;
 using Azure.Communication.Email;
 using Azure.Core;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
 using Microsoft.Azure.Cosmos.Table;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using StorageException = Microsoft.Azure.Storage.StorageException;
 
 namespace AutotuneWeb.Controllers
 {
@@ -23,15 +22,18 @@ namespace AutotuneWeb.Controllers
         private readonly ViewRenderService _viewRenderService;
         private readonly TokenCredential _tokenCredential;
         private readonly IOptions<EmailConfig> _emailConfig;
+        private readonly IOptions<StorageConfig> _storageConfig;
 
         public ResultsController(
             ViewRenderService viewRenderService,
             TokenCredential tokenCredential,
-            IOptions<EmailConfig> emailConfig)
+            IOptions<EmailConfig> emailConfig,
+            IOptions<StorageConfig> storageConfig)
         {
             _viewRenderService = viewRenderService;
             _tokenCredential = tokenCredential;
             _emailConfig = emailConfig;
+            _storageConfig = storageConfig;
         }
 
         public ActionResult Index(string nsUrl)
@@ -89,27 +91,23 @@ namespace AutotuneWeb.Controllers
                     var success = autotune.ExecutionInformation.ExitCode == 0;
 
                     // Connect to Azure Storage
-                    var storageAccount = Microsoft.Azure.Storage.CloudStorageAccount.Parse(connectionString);
-                    var cloudBlobClient = storageAccount.CreateCloudBlobClient();
+                    var container = new Azure.Storage.Blobs.BlobContainerClient(new Uri(new Uri(_storageConfig.Value.AccountUrl), jobName), _tokenCredential);
 
-                    // Find the log file produced by Autotune
-                    var container = cloudBlobClient.GetContainerReference(jobName);
-
-                    ViewBag.Logs = container.ListBlobs()
-                        .Select(b => new CloudBlockBlob(b.Uri, cloudBlobClient))
+                    ViewBag.Logs = container.GetBlobsAsync()
+                        .ToBlockingEnumerable()
                         .Where(b => b.Name != "autotune_recommendations.log" && b.Name != "profile.json")
                         .Select(b => b.Name)
                         .ToArray();
 
                     if (success)
                     {
-                        var blob = container.GetBlobReference("autotune_recommendations.log");
+                        var blob = container.GetBlobClient("autotune_recommendations.log");
 
                         using (var stream = new MemoryStream())
                         using (var reader = new StreamReader(stream))
                         {
                             // Download the log file
-                            blob.DownloadToStream(stream);
+                            blob.DownloadTo(stream);
                             stream.Position = 0;
 
                             var recommendations = reader.ReadToEnd();
@@ -121,10 +119,9 @@ namespace AutotuneWeb.Controllers
                         }
                     }
                 }
-                catch (StorageException ex)
+                catch (RequestFailedException ex) when (ex.Status == 404)
                 {
-                    if (ex.RequestInformation.ErrorCode == "BlobNotFound")
-                        return View("JobExpired");
+                    return View("JobExpired");
                 }
                 catch
                 {
@@ -157,17 +154,13 @@ namespace AutotuneWeb.Controllers
                 var jobName = $"autotune-job-{jobId}";
 
                 // Connect to Azure Storage
-                var storageAccount = Microsoft.Azure.Storage.CloudStorageAccount.Parse(connectionString);
-                var cloudBlobClient = storageAccount.CreateCloudBlobClient();
+                var container = new BlobContainerClient(new Uri(new Uri(_storageConfig.Value.AccountUrl), jobName), _tokenCredential);
 
-                // Find the log file produced by Autotune
-                var container = cloudBlobClient.GetContainerReference(jobName);
-
-                var blob = container.GetBlobReference(filename);
+                var blob = container.GetBlobClient(filename);
                 var stream = new MemoryStream();
                 
                 // Download the log file
-                blob.DownloadToStream(stream);
+                blob.DownloadTo(stream);
                 stream.Position = 0;
 
                 return File(stream, "text/plain", filename);
@@ -211,7 +204,7 @@ namespace AutotuneWeb.Controllers
                 var startTime = (DateTime?)null;
                 var endTime = (DateTime?)null;
                 var emailBody = (string)null;
-                var attachments = new CloudBlob[0];
+                var attachments = new BlobClient[0];
                 
                 try
                 {
@@ -222,23 +215,19 @@ namespace AutotuneWeb.Controllers
                     success = autotune.ExecutionInformation.ExitCode == 0;
                     startTime = autotune.ExecutionInformation.StartTime;
                     endTime = autotune.ExecutionInformation.EndTime;
-                    
-                    // Connect to Azure Storage
-                    var storageAccount = Microsoft.Azure.Storage.CloudStorageAccount.Parse(connectionString);
-                    var cloudBlobClient = storageAccount.CreateCloudBlobClient();
 
-                    // Find the log file produced by Autotune
-                    var container = cloudBlobClient.GetContainerReference(jobName);
+                    // Connect to Azure Storage
+                    var container = new BlobContainerClient(new Uri(new Uri(_storageConfig.Value.AccountUrl), jobName), _tokenCredential);
 
                     if (success)
                     {
-                        var blob = container.GetBlobReference("autotune_recommendations.log");
+                        var blob = container.GetBlobClient("autotune_recommendations.log");
 
                         using (var stream = new MemoryStream())
                         using (var reader = new StreamReader(stream))
                         {
                             // Download the log file
-                            blob.DownloadToStream(stream);
+                            await blob.DownloadToAsync(stream);
                             stream.Position = 0;
 
                             var recommendations = reader.ReadToEnd();
@@ -252,9 +241,9 @@ namespace AutotuneWeb.Controllers
                     }
 
                     // Get the log files to attach to the email
-                    attachments = container.ListBlobs()
-                        .Select(b => new CloudBlockBlob(b.Uri, cloudBlobClient))
+                    attachments = container.GetBlobs()
                         .Where(b => b.Name != "autotune_recommendations.log" && b.Name != "profile.json")
+                        .Select(b => container.GetBlobClient(b.Name))
                         .ToArray();
                 }
                 catch (Exception ex)
@@ -292,7 +281,7 @@ namespace AutotuneWeb.Controllers
             return Content("");
         }
 
-        private async Task EmailResultsAsync(string emailAddress, string emailBody, CloudBlob[] attachments)
+        private async Task EmailResultsAsync(string emailAddress, string emailBody, BlobClient[] attachments)
         {
             var message = new EmailMessage(
                 senderAddress: _emailConfig.Value.FromAddress,
@@ -307,11 +296,11 @@ namespace AutotuneWeb.Controllers
             {
                 using (var stream = new MemoryStream())
                 {
-                    await attachment.DownloadToStreamAsync(stream);
+                    await attachment.DownloadToAsync(stream);
                     message.Attachments.Add(new EmailAttachment(attachment.Name, "application/octet-stream", await BinaryData.FromStreamAsync(stream)));
                 }
             }
-            
+
             var client = new EmailClient(new Uri(_emailConfig.Value.ResourceEndpoint), _tokenCredential);
             await client.SendAsync(Azure.WaitUntil.Started, message);
         }

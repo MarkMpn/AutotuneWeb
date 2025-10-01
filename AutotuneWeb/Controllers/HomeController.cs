@@ -1,12 +1,14 @@
-﻿using AutotuneWeb.Models;
+﻿using AutotuneWeb.Config;
+using AutotuneWeb.Models;
+using Azure.Core;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
 using Microsoft.Azure.Batch.Common;
 using Microsoft.Azure.Cosmos.Table;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -21,6 +23,17 @@ namespace AutotuneWeb.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly TokenCredential _tokenCredential;
+        private readonly IOptions<StorageConfig> _storageConfig;
+
+        public HomeController(
+            TokenCredential tokenCredential,
+            IOptions<StorageConfig> storageConfig)
+        {
+            _tokenCredential = tokenCredential;
+            _storageConfig = storageConfig;
+        }
+
         public ActionResult Index()
         {
             var url = Request.Cookies["nsUrl"];
@@ -329,45 +342,17 @@ namespace AutotuneWeb.Controllers
         {
             var location = new StorageLocation();
 
-            // Connect to Azure Storage
-            var connectionString = Startup.Configuration.GetConnectionString("Storage");
-            var storageAccount = Microsoft.Azure.Storage.CloudStorageAccount.Parse(connectionString);
-            var cloudBlobClient = storageAccount.CreateCloudBlobClient();
-
             // Create container for the job
-            var container = cloudBlobClient.GetContainerReference(jobName);
+            var container = new BlobContainerClient(new Uri(new Uri(_storageConfig.Value.AccountUrl), jobName), _tokenCredential);
             await container.CreateAsync();
 
-            // Get a SAS URL for the container. This should allow write access to the container for the next 24 hours only
-            // to allow the job to upload results
-            var containerSasConstrains = new SharedAccessBlobPolicy
-            {
-                SharedAccessStartTime = DateTimeOffset.UtcNow.AddMinutes(-5),
-                SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddHours(24),
-                Permissions = SharedAccessBlobPermissions.Read | SharedAccessBlobPermissions.Write
-            };
-
-            // Generate the shared access signature on the container, setting the constraints directly on the signature
-            var sasContainerToken = container.GetSharedAccessSignature(containerSasConstrains);
-            location.ContainerUrl = container.Uri + sasContainerToken;
+            location.ContainerUrl = container.Uri.ToString();
 
             // Create the profile.json blob in the container
-            var blob = container.GetBlockBlobReference("profile.json");
-            await blob.UploadTextAsync(profile);
+            var blob = container.GetBlobClient("profile.json");
+            await blob.UploadAsync(BinaryData.FromString(profile));
 
-            // Get a SAS URL for the blob. This should allow read access to the profile for the next 24 hours only
-            var blobSasConstraints = new SharedAccessBlobPolicy
-            {
-                SharedAccessStartTime = DateTimeOffset.UtcNow.AddMinutes(-5),
-                SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddHours(24),
-                Permissions = SharedAccessBlobPermissions.Read
-            };
-
-            // Generate the shared access signature on the blob, setting the constraints directly on the signature.
-            var sasBlobToken = blob.GetSharedAccessSignature(blobSasConstraints);
-
-            // Return the URI string for the blob, including the SAS token.
-            location.ProfileUrl = blob.Uri + sasBlobToken;
+            location.ProfileUrl = blob.Uri.ToString();
 
             return location;
         }

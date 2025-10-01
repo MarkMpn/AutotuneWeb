@@ -33,6 +33,7 @@ namespace AutotuneWeb
 #endif
 
             services.AddOptions<EmailConfig>().BindConfiguration("Email");
+            services.AddOptions<StorageConfig>().BindConfiguration("Storage");
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
