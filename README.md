@@ -1,3 +1,8 @@
+> [!CAUTION]
+> # Discontinued
+> I no longer have time to maintain this project, so I have discontinued it. The code is still available in the repository for anyone who wants to use it as a
+> starting point or reference, but I won't be making any updates or providing support for it.
+
 # AutotuneWeb
 
 **[Run AutotuneWeb Now](https://autotuneweb.azurewebsites.net)**
