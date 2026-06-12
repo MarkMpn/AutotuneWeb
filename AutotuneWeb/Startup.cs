@@ -62,7 +62,12 @@ namespace AutotuneWeb
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                    pattern: "{**catchall}",
+                    new
+                    {
+                        controller="Redirect",
+                        action= "Index"
+                    });
             });
         }
     }
