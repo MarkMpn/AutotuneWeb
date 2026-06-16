@@ -168,117 +168,126 @@
 
 <h2>Running Autotune in the Cloud</h2>
 
-<p>
-    Complete the remaining fields below to run Autotune on this profile
-</p>
-
-@using (Html.BeginForm("RunJob", "Home"))
+@if (ViewBag.CanRunAutotuneInCloud)
 {
-    @Html.Hidden("nsUrl", (Uri)ViewBag.NSUrl)
-    @Html.Hidden("oapsProfile", profileJson)
-    @Html.Hidden("units", (string)ViewBag.Units)
-    @Html.Hidden("timezone", (string)ViewBag.TimeZone)
     <p>
-        Ready to run Autotune now? Enter a few more details, then click Run Now to have us run Autotune for you.
+        Complete the remaining fields below to run Autotune on this profile
     </p>
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="form-group">
-                <label for="min5MinCarbImpact">Min. 5 Minutes Carb Impact</label>
-                <div class="input-group">
-                    <input type="number" step="0.1" min="1" max="20" name="min5MCarbImpact" value="@Model.Min5mCarbImpact" class="form-control" required />
-                    <span class="input-group-addon">mg/dL/5m</span>
+    @using (Html.BeginForm("RunJob", "Home"))
+    {
+        @Html.Hidden("nsUrl", (Uri)ViewBag.NSUrl)
+        @Html.Hidden("oapsProfile", profileJson)
+        @Html.Hidden("units", (string)ViewBag.Units)
+        @Html.Hidden("timezone", (string)ViewBag.TimeZone)
+        <p>
+            Ready to run Autotune now? Enter a few more details, then click Run Now to have us run Autotune for you.
+        </p>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="min5MinCarbImpact">Min. 5 Minutes Carb Impact</label>
+                    <div class="input-group">
+                        <input type="number" step="0.1" min="1" max="20" name="min5MCarbImpact" value="@Model.Min5mCarbImpact" class="form-control" required />
+                        <span class="input-group-addon">mg/dL/5m</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="alert alert-info">
+                    The minimum amount of the expected carb impact that should be assumed when no carb absorption is identified from the CGM data,
+                    forcing the remaining carbs on board to decay.
                 </div>
             </div>
         </div>
-        <div class="col-md-8">
-            <div class="alert alert-info">
-                The minimum amount of the expected carb impact that should be assumed when no carb absorption is identified from the CGM data,
-                forcing the remaining carbs on board to decay.
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="pumpBasalIncrement">Pump Basal Increment</label>
+                    <div class="input-group">
+                        <input type="number" step="0.005" min="0.005" max="1" name="pumpBasalIncrement" value="0.01" class="form-control" required />
+                        <span class="input-group-addon">U/h</span>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-4">
-            <div class="form-group">
-                <label for="pumpBasalIncrement">Pump Basal Increment</label>
-                <div class="input-group">
-                    <input type="number" step="0.005" min="0.005" max="1" name="pumpBasalIncrement" value="0.01" class="form-control" required />
-                    <span class="input-group-addon">U/h</span>
+            <div class="col-md-8">
+                <div class="alert alert-info">
+                    Autotune will likely recommend basals in fractions of a unit that you can't program into your pump, so enter here what
+                    increments your pump can handle (0.1, 0.5 etc.) to get your results rounded for you.
                 </div>
             </div>
         </div>
-        <div class="col-md-8">
-            <div class="alert alert-info">
-                Autotune will likely recommend basals in fractions of a unit that you can't program into your pump, so enter here what
-                increments your pump can handle (0.1, 0.5 etc.) to get your results rounded for you.
+        <div class="row">
+            <div class="col-md-4">
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" name="uamAsBasal" value="true" />
+                        Categorize UAM as basal
+                    </label>
+                </div>
             </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-4">
-            <div class="checkbox">
-                <label>
-                    <input type="checkbox" name="uamAsBasal" value="true" />
-                    Categorize UAM as basal
-                </label>
-            </div>
-        </div>
-        <div class="col-md-8">
-            <div class="alert alert-info">
-                If Autotune sees some sudden rises in your CGM data, it may conclude that there were carbs eaten but not entered into Nightscout.
-                If you have reliably entered all carbs eaten, tick this box and those rises will be used to recommend changes to the basal rate.
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-4">
-            <label for="curve">Insulin Type</label>
-            <select name="curve" class="form-control">
-                <option value="rapid-acting">Rapid Acting (Humalog/Novolog/Novorapid)</option>
-                <option value="ultra-rapid">Ultra Rapid (Fiasp)</option>
-            </select>
-        </div>
-        <div class="col-md-8">
-            <div class="alert alert-info">
-                Select the type of insulin you use so that Autotune can tell how quickly it acts and decays.
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-4">
-            <label for="days">Days of Data</label>
-            <div class="input-group">
-                <input type="number" name="days" min="1" max="30" value="@days" class="form-control" required />
-                <span class="input-group-addon">days</span>
-            </div>
-        </div>
-        <div class="col-md-8">
-            <div class="alert alert-info">
-                The number of days of data to be processed by Autotune (up to 30)
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-4">
-            <div class="form-group">
-                <label for="emailResultsTo">Email Results To</label>
-                <div class="input-group">
-                    <span class="input-group-addon">@@</span>
-                    <input type="email" name="emailResultsTo" class="form-control" required value="@ViewBag.Email" />
+            <div class="col-md-8">
+                <div class="alert alert-info">
+                    If Autotune sees some sudden rises in your CGM data, it may conclude that there were carbs eaten but not entered into Nightscout.
+                    If you have reliably entered all carbs eaten, tick this box and those rises will be used to recommend changes to the basal rate.
                 </div>
             </div>
         </div>
-        <div class="col-md-8">
-            <div class="alert alert-info">
-                Autotune takes a few minutes to run, so we'll email the results to you when they're ready. You should get them in 10 - 20 minutes,
-                check your spam folder if you don't get it.
+        <div class="row">
+            <div class="col-md-4">
+                <label for="curve">Insulin Type</label>
+                <select name="curve" class="form-control">
+                    <option value="rapid-acting">Rapid Acting (Humalog/Novolog/Novorapid)</option>
+                    <option value="ultra-rapid">Ultra Rapid (Fiasp)</option>
+                </select>
+            </div>
+            <div class="col-md-8">
+                <div class="alert alert-info">
+                    Select the type of insulin you use so that Autotune can tell how quickly it acts and decays.
+                </div>
             </div>
         </div>
-    </div>
+        <div class="row">
+            <div class="col-md-4">
+                <label for="days">Days of Data</label>
+                <div class="input-group">
+                    <input type="number" name="days" min="1" max="30" value="@days" class="form-control" required />
+                    <span class="input-group-addon">days</span>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="alert alert-info">
+                    The number of days of data to be processed by Autotune (up to 30)
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="emailResultsTo">Email Results To</label>
+                    <div class="input-group">
+                        <span class="input-group-addon">@@</span>
+                        <input type="email" name="emailResultsTo" class="form-control" required value="@ViewBag.Email" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="alert alert-info">
+                    Autotune takes a few minutes to run, so we'll email the results to you when they're ready. You should get them in 10 - 20 minutes,
+                    check your spam folder if you don't get it.
+                </div>
+            </div>
+        </div>
+        <p>
+            <input type="submit" class="btn btn-success" value="Run Now" />
+        </p>
+    }
+}
+else
+{
     <p>
-        <input type="submit" class="btn btn-success" value="Run Now" />
+        This server is not configured to support running Autotune in cloud
     </p>
 }
 
