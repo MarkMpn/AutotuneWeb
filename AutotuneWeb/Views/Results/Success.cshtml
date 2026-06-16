@@ -51,7 +51,7 @@
 <body style="font-family: Helvetica Neue,Helvetica,Arial,sans-serif; font-size: 14px; color: rgb(51, 51, 51);">
     <h1>Autotune Results</h1>
 
-    <h2><a href="@Model.Job.NSUrl">@Model.Job.NSUrl</a></h2>
+    <h2><a href="@Uri.EscapeDataString(Model.Job.NSUrl.ToString())">@Model.Job.NSUrl</a></h2>
     <p>Based on data entered between @(startDate.ToString("yyyy-MM-dd")) and @(endDate.ToString("yyyy-MM-dd"))</p>
 
     @if (Model.Job.UAMAsBasal)

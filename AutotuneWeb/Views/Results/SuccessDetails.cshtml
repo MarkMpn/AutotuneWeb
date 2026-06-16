@@ -37,7 +37,7 @@
 
 <h1>Autotune Results</h1>
 
-<h2><a href="@Model.Job.NSUrl">@Model.Job.NSUrl</a></h2>
+<h2><a href="@Uri.EscapeDataString(Model.Job.NSUrl.ToString())">@Model.Job.NSUrl</a></h2>
 <p>Based on data entered between @(startDate.ToString("yyyy-MM-dd")) and @(endDate.ToString("yyyy-MM-dd"))</p>
 
 @if (Model.Job.UAMAsBasal)
@@ -124,6 +124,6 @@ else
 @foreach (var log in (string[])ViewBag.Logs)
 {
     <p>
-        <a href="/Results/DownloadLog?nsUrl=@Model.Job.NSUrl&jobId=@Model.Job.RowKey&filename=@log" class="btn btn-default">Download Log</a>
+        <a href="/Results/DownloadLog?nsUrl=@Uri.EscapeDataString(Model.Job.NSUrl.ToString())&jobId=@Model.Job.RowKey&filename=@log" class="btn btn-default">Download Log</a>
     </p>
 }

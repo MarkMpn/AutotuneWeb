@@ -6,6 +6,7 @@ namespace AutotuneWeb.Models
     public class Job : TableEntity
     {
         public string NSUrl { get; set; }
+        public string ApiSecret { get; set; }
         public double PumpBasalIncrement { get; set; }
         public string EmailResultsTo { get; set; }
         public string Units { get; set; }
